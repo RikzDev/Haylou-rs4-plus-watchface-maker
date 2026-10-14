@@ -71,7 +71,7 @@ class ResourceLinkTests(unittest.TestCase):
             # Simulate a pre-fix module without altering relocation offsets.
             old_code = code.replace(b"haylou_editor_abi_version", b"haylou_editor_old_version")
             self.assertNotEqual(old_code, code)
-            with self.assertRaisesRegex(RuntimeError, "buffers de dados insuficientes"):
+            with self.assertRaisesRegex(RuntimeError, "insufficient data buffers"):
                 validate_upload(pack_dial([(files[0][0], old_code), files[1]], 253, "test"), 253)
 
 
@@ -125,7 +125,7 @@ class SlotTests(unittest.IsolatedAsyncioTestCase):
             attempted.append(ident)
             return 9
 
-        with self.assertRaisesRegex(RuntimeError, "slots customizados conhecidos"):
+        with self.assertRaisesRegex(RuntimeError, "known custom slots"):
             await resolve_collision(self.package, 253, 9, announce, lambda *_: None)
         self.assertEqual(attempted, list(CUSTOM_SLOTS[1:]))
 

@@ -11,12 +11,12 @@ async def resolve_collision(data, ident, error, announce, report):
     attempted = {ident}
     while error == 9:
         if ident not in CUSTOM_SLOTS:
-            raise RuntimeError(f"A face {ident} ja existe. A face instalada foi preservada.")
+            raise RuntimeError(f"Face {ident} already exists. The installed face was preserved.")
         next_ident = next((slot for slot in CUSTOM_SLOTS if slot not in attempted), None)
         if next_ident is None:
             raise RuntimeError(
-                "Os slots customizados conhecidos estao ocupados. "
-                "Remova uma face pelo relogio ou aplicativo antes de enviar outra."
+                "All known custom slots are occupied. "
+                "Remove a face using the watch or phone app before uploading another."
             )
         previous = ident
         data = retarget_live_package(data, next_ident)

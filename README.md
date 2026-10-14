@@ -39,7 +39,7 @@ Import a **TBWF watchface made for the standard Haylou RS4**, edit its images, t
 - Validate package checksums, resource links and known module requirements before upload.
 - With the uploader configured, generate an unsaved binary before sending and try another known custom ID when a slot is occupied.
 
-The editor UI is currently in Portuguese. This guide describes its actions in English.
+The editor UI and tool output are in English. The Output panel uses white for information, yellow for warnings and red for errors. A blue upload note explains the expected first pairing failure and automatic retry.
 
 ## Compatibility
 

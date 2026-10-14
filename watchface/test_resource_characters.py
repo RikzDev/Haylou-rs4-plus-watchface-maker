@@ -51,7 +51,7 @@ class CharacterImageTests(unittest.TestCase):
             work = Path(folder)
             item = self.fixture(work)
             del item["characters"]["9"]
-            with self.assertRaisesRegex(ValueError, "imagens ausentes.*9"):
+            with self.assertRaisesRegex(ValueError, "Missing character images.*9"):
                 prepare_glyphs([item], work)
 
     def test_resized_hand_exports_real_dimensions(self):

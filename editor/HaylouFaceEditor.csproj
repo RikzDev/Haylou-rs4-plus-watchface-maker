@@ -7,6 +7,6 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>HaylouFaceEditor</RootNamespace>
     <AssemblyName>HaylouFaceEditor</AssemblyName>
-    <ApplicationTitle>Editor de face RS4 Plus</ApplicationTitle>
+    <ApplicationTitle>RS4 Plus Watchface Editor</ApplicationTitle>
   </PropertyGroup>
 </Project>

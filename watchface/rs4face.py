@@ -26,10 +26,10 @@ HERE = Path(__file__).resolve().parent
 EZIP = HERE / "tools" / "ezip.exe"
 
 FORMATS = {
-    1: "eZip sem alpha",
-    2: "eZip com alpha",
-    4: "pixel sem alpha",
-    5: "pixel com alpha",
+    1: "eZip without alpha",
+    2: "eZip with alpha",
+    4: "Pixels without alpha",
+    5: "Pixels with alpha",
 }
 
 
@@ -46,22 +46,22 @@ def store_crc(value: int) -> int:
 
 def parse_dial(data: bytes) -> dict:
     if data[:4] != b"dial":
-        raise ValueError("arquivo não é um pacote dial (magic 'dial' ausente)")
+        raise ValueError("File is not a dial package (missing 'dial' magic)")
     version, ident, count, header_size = struct.unpack_from("<HHHH", data, 8)
     if header_size < 0x40 or header_size > len(data):
-        raise ValueError(f"cabeçalho inválido: {header_size}")
+        raise ValueError(f"Invalid header: {header_size}")
     name = data[0x10:0x20].split(b"\x00", 1)[0].decode("utf-8", "replace")
     files = []
     offset = 0x40
     for _ in range(count):
         if offset + 64 > header_size:
-            raise ValueError("tabela de arquivos truncada")
+            raise ValueError("Truncated file table")
         raw_crc, rel, length = struct.unpack_from("<III", data, offset)
         path = data[offset + 12 : offset + 64].split(b"\x00", 1)[0].decode("ascii", "replace")
         start = header_size + rel
         blob = data[start : start + length]
         if len(blob) != length:
-            raise ValueError(f"{path}: arquivo truncado")
+            raise ValueError(f"{path}: truncated file")
         files.append(
             {
                 "path": path,
@@ -84,10 +84,10 @@ def parse_dial(data: bytes) -> dict:
 
 def pack_dial(files: list[tuple[str, bytes]], ident: int, name: str, version: int = 0x0701) -> bytes:
     if not files:
-        raise ValueError("pacote sem arquivos")
+        raise ValueError("Package has no files")
     raw_name = name.encode("utf-8")
     if len(raw_name) > 15:
-        raise ValueError("nome longo demais: no máximo 15 bytes UTF-8")
+        raise ValueError("Name is too long: maximum 15 UTF-8 bytes")
     header_size = 0x40 + len(files) * 64
     header = bytearray(header_size)
     header[0:4] = b"dial"
@@ -99,7 +99,7 @@ def pack_dial(files: list[tuple[str, bytes]], ident: int, name: str, version: in
     for index, (path, blob) in enumerate(files):
         encoded = path.encode("ascii")
         if len(encoded) > 51:
-            raise ValueError(f"caminho longo demais: {path}")
+            raise ValueError(f"Path is too long: {path}")
         entry = bytearray(64)
         struct.pack_into(
             "<III",
@@ -131,7 +131,7 @@ def image_header(blob: bytes) -> tuple[int, int, int] | None:
 
 def require_ezip() -> Path:
     if not EZIP.is_file():
-        raise SystemExit(f"falta {EZIP}")
+        raise SystemExit(f"eZip converter not found: {EZIP}")
     return EZIP
 
 
@@ -146,7 +146,7 @@ def run_ezip(args: list[str], cwd: Path) -> None:
     )
     if result.returncode != 0:
         detail = (result.stdout + result.stderr).strip()
-        raise RuntimeError(detail or f"ezip saiu com código {result.returncode}")
+        raise RuntimeError(detail or f"eZip failed with exit code {result.returncode}")
 
 
 def png_to_ezip(png: Path) -> bytes:
@@ -158,7 +158,7 @@ def png_to_ezip(png: Path) -> bytes:
         )
         found = list(work.rglob("*.bin"))
         if len(found) != 1:
-            raise RuntimeError(f"ezip não gerou um único .bin em {work}")
+            raise RuntimeError(f"eZip did not produce exactly one .bin in {work}")
         return found[0].read_bytes()
 
 
@@ -209,22 +209,22 @@ def fit_image(source: Path, size: tuple[int, int], mode: str, pad: tuple[int, in
 def parse_color(text: str) -> tuple[int, int, int, int]:
     raw = text.removeprefix("#")
     if len(raw) != 6 or any(c not in "0123456789abcdefABCDEF" for c in raw):
-        raise argparse.ArgumentTypeError("cor precisa ser RRGGBB, por exemplo 000000")
+        raise argparse.ArgumentTypeError("Color must be RRGGBB, for example 000000")
     return (int(raw[0:2], 16), int(raw[2:4], 16), int(raw[4:6], 16), 255)
 
 
 def cmd_info(path: Path) -> None:
     dial = parse_dial(path.read_bytes())
     print(f"{path}")
-    print(f"  versão 0x{dial['version']:04x}  id {dial['id']}  nome {dial['name']!r}")
-    print(f"  crc da tabela: {'ok' if dial['entry_crc_ok'] else 'ERRADO'}")
+    print(f"  version 0x{dial['version']:04x}  ID {dial['id']}  name {dial['name']!r}")
+    print(f"  table CRC: {'ok' if dial['entry_crc_ok'] else 'ERRADO'}")
     for item in dial["files"]:
         header = image_header(item["data"])
         extra = ""
         if header:
             fmt, width, height = header
-            extra = f"  imagem {width}x{height} {FORMATS[fmt]}"
-        flag = "ok" if item["crc_ok"] else "ERRADO"
+            extra = f"  image {width}x{height} {FORMATS[fmt]}"
+        flag = "ok" if item["crc_ok"] else "INVALID"
         print(f"  {item['path']}  {len(item['data'])} bytes  crc {flag}{extra}")
 
 
@@ -246,7 +246,7 @@ def cmd_unpack(path: Path, dest: Path, export_png: bool) -> None:
         "files": manifest_files,
     }
     (dest / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"extraído em {dest}")
+    print(f"Extracted to {dest}")
 
 
 def cmd_pack(source: Path, dest: Path) -> None:
@@ -257,7 +257,7 @@ def cmd_pack(source: Path, dest: Path) -> None:
     blob = pack_dial(files, int(manifest["id"]), manifest["name"], int(manifest["version"]))
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(blob)
-    print(f"escrito {dest} ({len(blob)} bytes)")
+    print(f"Written {dest} ({len(blob)} bytes)")
 
 
 SAMPLES = {
@@ -321,8 +321,8 @@ def cmd_tbwf(source: Path, dest: Path, name: str) -> None:
         draw.text((x, y), sample, font=font, fill=fill)
     preview_path = dest.with_suffix(".preview.png")
     preview.convert("RGB").save(preview_path)
-    print(f"prévia do tbwf: {preview_path}")
-    print("O .bin leva só a arte. O relógio desenha hora, data e semana no lugar fixo, não nas posições do tbwf.")
+    print(f"TBWF preview: {preview_path}")
+    print("The .bin contains only artwork. The watch draws time, date and weekday at its fixed positions, not the TBWF positions.")
 
 
 def fit_image_obj(image, size: tuple[int, int]):
@@ -363,9 +363,9 @@ def cmd_create(image: Path, dest: Path, fit: str, pad: tuple[int, int, int, int]
     preview = background.copy()
     draw_layout(preview)
     preview.convert("RGB").save(guide)
-    print(f"escrito {dest} ({len(blob)} bytes)")
-    print(f"guia do relógio fixo: {guide}")
-    print("Esse arquivo troca a foto. Hora, data e semana continuam no lugar fixo do relógio.")
+    print(f"Written {dest} ({len(blob)} bytes)")
+    print(f"Fixed-clock placement guide: {guide}")
+    print("This file replaces the photo. Time, date and weekday keep the firmware's fixed positions.")
 
 
 def draw_layout(image) -> None:
@@ -383,29 +383,29 @@ def draw_layout(image) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Watchfaces de foto do Haylou RS4 Plus")
+    parser = argparse.ArgumentParser(description="Haylou RS4 Plus photo watchfaces")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    info = sub.add_parser("info", help="mostrar o conteúdo de um .bin")
+    info = sub.add_parser("info", help="Inspect a .bin package")
     info.add_argument("bin", type=Path)
 
-    unpack = sub.add_parser("unpack", help="extrair os arquivos internos")
+    unpack = sub.add_parser("unpack", help="Extract the internal files")
     unpack.add_argument("bin", type=Path)
     unpack.add_argument("dest", type=Path)
-    unpack.add_argument("--png", action="store_true", help="também exportar as imagens eZip")
+    unpack.add_argument("--png", action="store_true", help="Also export eZip images")
 
-    pack = sub.add_parser("pack", help="remontar um .bin a partir de um unpack")
+    pack = sub.add_parser("pack", help="Rebuild a .bin from unpacked files")
     pack.add_argument("source", type=Path)
     pack.add_argument("bin", type=Path)
 
-    create = sub.add_parser("create", help="gerar um watchface de foto 368x448")
+    create = sub.add_parser("create", help="Generate a 368x448 photo watchface")
     create.add_argument("image", type=Path)
     create.add_argument("-o", "--output", type=Path, required=True)
     create.add_argument("--fit", choices=("cover", "contain"), default="cover")
     create.add_argument("--pad", type=parse_color, default=(0, 0, 0, 255))
     create.add_argument("--name", default=DEFAULT_NAME)
 
-    tbwf = sub.add_parser("tbwf", help="converter um .tbwf para o dial de foto do LS11")
+    tbwf = sub.add_parser("tbwf", help="Convert a TBWF to an LS11 photo face")
     tbwf.add_argument("tbwf", type=Path)
     tbwf.add_argument("-o", "--output", type=Path, required=True)
     tbwf.add_argument("--name", default=DEFAULT_NAME)
@@ -427,5 +427,5 @@ if __name__ == "__main__":
     try:
         main()
     except (ValueError, RuntimeError, OSError) as exc:
-        print(f"erro: {exc}", file=sys.stderr)
+        print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

@@ -99,7 +99,7 @@ public partial class MainWindow
         {
             if (signature != JsonSerializer.Serialize(GlyphPreviewItems())) return;
             _failedGlyphSignature = signature;
-            Log("Prévia do texto: " + ex.Message);
+            Log("Text preview failed: " + ex.Message, LogLevel.Error);
         }
     }
 }

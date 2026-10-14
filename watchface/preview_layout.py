@@ -47,5 +47,5 @@ if __name__ == "__main__":
     try:
         render_preview(json.loads(args.layout.read_text(encoding="utf-8"))["widgets"], args.output)
     except (ValueError, RuntimeError, OSError) as exc:
-        print(f"erro: {exc}", file=sys.stderr)
+        print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)

@@ -20,7 +20,7 @@ def reset_body():
 async def blast(device):
     client = BleakClient(device, timeout=2.0, services=[SERVICE])
     await client.connect()
-    print("DENTRO", flush=True)
+    print("CONNECTED", flush=True)
     try:
         framed = s.frame(reset_body())
         sl = min(495, max(20, int(getattr(client, "mtu_size", 23) or 23) - 3))
@@ -28,7 +28,7 @@ async def blast(device):
             for offset in range(0, len(framed), sl):
                 await client.write_gatt_char(s.WRITE, framed[offset : offset + sl], response=False)
             await asyncio.sleep(0.05)
-        print("reset enviado", len(framed), "conectado", client.is_connected, flush=True)
+        print("Reset sent", len(framed), "connected", client.is_connected, flush=True)
         await asyncio.sleep(1.0)
         return True
     finally:
@@ -41,8 +41,8 @@ async def blast(device):
 async def main():
     if not s.ADDR:
         raise RuntimeError("Set HAYLOU_WATCH_ADDRESS before recovery.")
-    print("reset de fabrica, scan continuo", flush=True)
-    print("reinicia o relogio agora. bluetooth do celular desligado.", flush=True)
+    print("[WARNING] Factory reset; scanning continuously", flush=True)
+    print("Restart the watch now. Keep phone Bluetooth off.", flush=True)
     loop = asyncio.get_running_loop()
     seen = asyncio.Queue()
 
@@ -52,7 +52,7 @@ async def main():
 
     scanner = BleakScanner(detection_callback=on_detect)
     await scanner.start()
-    print("escutando", flush=True)
+    print("Listening", flush=True)
     deadline = time.time() + 180
     try:
         while time.time() < deadline:
@@ -62,21 +62,21 @@ async def main():
                 break
             while not seen.empty():
                 device = seen.get_nowait()
-            print("visto", flush=True)
+            print("Watch detected", flush=True)
             await scanner.stop()
             try:
                 if await blast(device):
-                    print("comando saiu", flush=True)
+                    print("Reset command sent", flush=True)
                     return
             except Exception as exc:
-                print("falha", type(exc).__name__, exc, flush=True)
+                print("[WARNING] Connection attempt failed", type(exc).__name__, exc, flush=True)
             await scanner.start()
     finally:
         try:
             await scanner.stop()
         except Exception:
             pass
-    print("nao enviou", flush=True)
+    print("[ERROR] Reset was not sent", flush=True)
     sys.exit(1)
 
 

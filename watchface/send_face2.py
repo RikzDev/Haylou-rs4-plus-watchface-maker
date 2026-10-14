@@ -48,7 +48,7 @@ class Tee:
 _log_handle = LOG_FILE.open("a", encoding="utf-8", buffering=1)
 sys.stdout = Tee(sys.stdout, _log_handle)
 sys.stderr = Tee(sys.stderr, _log_handle)
-print("\n===", "validacao local" if "--check" in sys.argv else "envio", time.strftime("%Y-%m-%d %H:%M:%S"), "arquivo", FILE, "id", PIC, "===", flush=True)
+print("\n===", "local validation" if "--check" in sys.argv else "upload", time.strftime("%Y-%m-%d %H:%M:%S"), "file", FILE, "id", PIC, "===", flush=True)
 
 
 def varint(n):
@@ -217,7 +217,7 @@ async def connect():
         await client.connect()
         return client
     except Exception as exc:
-        print("conexao direta falhou", exc, flush=True)
+        print("[WARNING] Direct connection failed; scanning for the configured watch", exc, flush=True)
     found = await BleakScanner.discover(timeout=15.0)
     target = None
     for dev in found:
@@ -226,7 +226,7 @@ async def connect():
             target = dev
             break
     if target is None:
-        print("relogio nao apareceu", flush=True)
+        print("[ERROR] Watch not found", flush=True)
         for dev in found:
             print("scan", dev.address, dev.name, flush=True)
         return None
@@ -246,26 +246,26 @@ async def main():
         sys.path.insert(0, str(LOG_FILE.parent))
         from build_live import validate_upload
         validate_upload(data, PIC)
-        print("pacote validado antes da conexao", FILE.name, len(data), "bytes", flush=True)
+        print("Package validated before connection", FILE.name, len(data), "bytes", flush=True)
         if "--check" in sys.argv:
             return
     skip = int(os.environ.get("OFFSET", "0"))
     limit = int(os.environ.get("LIMIT", "0"))
     if skip:
         data = data[skip:]
-        print("teste offset", skip, flush=True)
+        print("[WARNING] Diagnostic offset", skip, flush=True)
     if limit:
         data = data[:limit]
-        print("teste cortado", limit, flush=True)
+        print("[WARNING] Diagnostic truncation", limit, flush=True)
     crc = 0
     parts = [data[i : i + CHUNK] for i in range(0, len(data), CHUNK)]
     probe = frame(msg_query(82))
     print(
-        f"arquivo {len(data)} crc 0x{crc:04x} pedacos {len(parts)} de {CHUNK} consulta {len(probe)} tz {len(TZ)}",
+        f"File {len(data)} bytes, CRC 0x{crc:04x}, {len(parts)} chunks of {CHUNK}, query {len(probe)}, timezone {len(TZ)}",
         flush=True,
     )
     if len(probe) != 31 or len(TZ) != 12:
-        print("quadro de consulta com tamanho errado", flush=True)
+        print("[ERROR] Unexpected query frame length", flush=True)
         return
     queue = asyncio.Queue()
     acks = asyncio.Queue()
@@ -283,17 +283,17 @@ async def main():
     print("CONNECTED", getattr(client, "mtu_size", "?"), flush=True)
     paired = False
     try:
-        print("pareando so com criptografia. se o relogio pedir confirmacao, aceita", flush=True)
+        print("Pairing with encryption only. Accept confirmation on the watch if requested.", flush=True)
         await asyncio.wait_for(
             client.pair(protection_level=DevicePairingProtectionLevel.ENCRYPTION),
             30,
         )
         paired = True
-        print("PAREADO", flush=True)
+        print("PAIRED", flush=True)
     except Exception as exc:
-        print("pareamento", type(exc).__name__, exc, flush=True)
+        print("[WARNING] Pairing attempt failed", type(exc).__name__, exc, flush=True)
     if not paired or not client.is_connected:
-        print("link caiu no pareamento, reconectando", flush=True)
+        print("[WARNING] Link dropped during pairing; reconnecting automatically", flush=True)
         await asyncio.sleep(3.0)
         try:
             await client.disconnect()
@@ -309,14 +309,14 @@ async def main():
                 30,
             )
             paired = True
-            print("PAREADO", flush=True)
+            print("PAIRED", flush=True)
         except Exception as exc:
-            print("pareamento 2", type(exc).__name__, exc, flush=True)
+            print("[ERROR] Pairing retry failed", type(exc).__name__, exc, flush=True)
     try:
         await client.start_notify(INDICATE, on_notify)
         await client.start_notify(NOTIFY, on_notify)
     except Exception as exc:
-        print("notify inicial falhou", type(exc).__name__, exc, flush=True)
+        print("[WARNING] Initial notifications failed; reconnecting", type(exc).__name__, exc, flush=True)
         try:
             await client.disconnect()
         except Exception:
@@ -372,7 +372,7 @@ async def main():
                 got = binascii.crc_hqx(payload, 0) & 0xFFFF
                 want = packet[5] | (packet[6] << 8)
                 if got != want:
-                    print("quadro com crc ruim", packet[:12].hex(), flush=True)
+                    print("[WARNING] Received frame with an invalid CRC", packet[:12].hex(), flush=True)
                     continue
                 seen.add(packet)
                 fields = parse(payload)
@@ -384,12 +384,12 @@ async def main():
                 if cmd == expect:
                     return err, dials
         if not quiet:
-            print(f"sem resposta cmd {expect} conectado {client.is_connected}", flush=True)
+            print(f"[WARNING] No response to command {expect}; connected {client.is_connected}", flush=True)
         return None, None
 
     async def revive():
         nonlocal client
-        print("reconectando", flush=True)
+        print("[WARNING] Reconnecting", flush=True)
         try:
             if client.is_connected:
                 await client.disconnect()
@@ -402,7 +402,7 @@ async def main():
             uuids = {char.uuid.lower() for service in client.services for char in service.characteristics}
             if NOTIFY.lower() in uuids:
                 break
-            print("gatt incompleto", attempt, flush=True)
+            print("[WARNING] Incomplete GATT services", attempt, flush=True)
             try:
                 await client.disconnect()
             except Exception:
@@ -415,7 +415,7 @@ async def main():
             await client.start_notify(INDICATE, on_notify)
             await client.start_notify(NOTIFY, on_notify)
         except Exception as exc:
-            print("notify falhou", type(exc).__name__, exc, flush=True)
+            print("[ERROR] Notifications failed", type(exc).__name__, exc, flush=True)
             return False
         await asyncio.sleep(0.8)
         print("RECONNECTED", getattr(client, "mtu_size", "?"), flush=True)
@@ -426,13 +426,13 @@ async def main():
             return None, None
         drain()
         framed = frame(payload)
-        print(f"tx {len(framed)} marca {framed[2]} corte {SLICE} espera {expect}", flush=True)
+        print(f"TX {len(framed)} bytes, marker {framed[2]}, slice {SLICE}, expecting {expect}", flush=True)
         try:
             for offset in range(0, len(framed), SLICE):
                 await client.write_gatt_char(WRITE, framed[offset : offset + SLICE], response=False)
                 await asyncio.sleep(GAP)
         except Exception as exc:
-            print("escrita caiu", type(exc).__name__, exc, flush=True)
+            print("[ERROR] Write failed", type(exc).__name__, exc, flush=True)
             await revive()
             return None, None
         result = await wait_cmd(expect, timeout)
@@ -451,38 +451,38 @@ async def main():
                 await client.write_gatt_char(CONFIRM, pkt, response=True)
                 n += 1
             except Exception as exc:
-                print("confirma", type(exc).__name__, exc, flush=True)
+                print("[ERROR] Confirmation failed", type(exc).__name__, exc, flush=True)
                 break
         if n:
-            print(f"confirmou {n}", flush=True)
+            print(f"Confirmed {n} receipt(s)", flush=True)
 
     try:
         att = max(20, int(getattr(client, "mtu_size", 23) or 23) - 3)
         global SLICE
         if SLICE > att:
             SLICE = att
-        print("corte", SLICE, "att", att, flush=True)
+        print("Slice", SLICE, "att", att, flush=True)
         if os.environ.get("QUERY"):
-            print("so consulta", flush=True)
+            print("Query only", flush=True)
             _err, dials = await send(msg_query(82), 82, 8)
-            print("atual", dials, flush=True)
+            print("Current dial", dials, flush=True)
             _err, _dials = await send(msg_query(2), 2, 8)
-            print("aparelho", _err, flush=True)
+            print("Device", _err, flush=True)
             return
-        print("inicio", flush=True)
+        print("Starting upload", flush=True)
         err, _dials = await send(msg_start(len(data), crc, PIC), 34, 8)
         if err is None and not client.is_connected:
-            print("link caiu depois do mtu, esperando o anuncio", flush=True)
+            print("[WARNING] Link dropped after MTU negotiation; waiting for advertising", flush=True)
             await asyncio.sleep(6.0)
             back = False
             for attempt in range(4):
                 if await revive():
                     back = True
                     break
-                print("volta", attempt, flush=True)
+                print("Reconnect attempt", attempt, flush=True)
                 await asyncio.sleep(3.0)
             if not back:
-                print("nao voltou", flush=True)
+                print("[ERROR] Reconnection failed", flush=True)
                 return
             err, _dials = await send(msg_start(len(data), crc, PIC), 34, 8)
         if err == 9:
@@ -498,36 +498,36 @@ async def main():
                     import hashlib
                     target = target.with_name(target.stem + "_" + hashlib.sha256(candidate).hexdigest()[:8] + ".bin")
                 target.write_bytes(candidate)
-                print(f"ID {previous} ocupado; face atual preservada. Tentando ID {ident}.", flush=True)
-                print("bin com ID ajustado", target, len(candidate), "bytes", flush=True)
+                print(f"[WARNING] ID {previous} is occupied; installed face preserved. Trying ID {ident}.", flush=True)
+                print("Retargeted binary", target, len(candidate), "bytes", flush=True)
 
             err, data, PIC = await resolve_collision(data, PIC, err, announce_slot, report_slot)
             parts = [data[i : i + CHUNK] for i in range(0, len(data), CHUNK)]
         if err == 14:
-            print("inicio ocupado, tentando de novo", err, flush=True)
+            print("[WARNING] Installer is busy; retrying", err, flush=True)
             await asyncio.sleep(1.5)
             err, _dials = await send(msg_start(len(data), crc, PIC), 34, 8)
         if err != 0:
-            raise RuntimeError(f"Relogio recusou o inicio do envio: erro {err}, ID {PIC}.")
+            raise RuntimeError(f"Watch refused upload start: error {err}, ID {PIC}.")
         await asyncio.sleep(0.3)
         for index, part in enumerate(parts):
             if index:
                 await asyncio.sleep(0.05)
             sn = 65535 if index == len(parts) - 1 else index
-            print(f"pedaco {index} sn {sn} off {index * CHUNK}", flush=True)
+            print(f"Chunk {index}, serial {sn}, offset {index * CHUNK}", flush=True)
             err, _dials = await send(msg_chunk(sn, part), 32, 6)
             if err is None:
                 err, _dials = await wait_cmd(32, 40, quiet=True)
                 if err == 0:
-                    print(f"pedaco {index} ack atrasado", flush=True)
+                    print(f"[WARNING] Chunk {index} received a delayed acknowledgment", flush=True)
                 await flush_confirms()
             accepted = err == 0
             if not accepted:
-                print(f"pedaco {index} err {err}", flush=True)
+                print(f"[ERROR] Chunk {index} error {err}", flush=True)
             if not accepted:
-                print(f"parou no pedaco {index} off {index * CHUNK}", flush=True)
+                print(f"[ERROR] Transfer stopped at chunk {index}, offset {index * CHUNK}", flush=True)
                 return
-        print("envio completo", flush=True)
+        print("Transfer complete", flush=True)
         _err, dials = await wait_cmd(82, 10, quiet=True)
         if not dials:
             _err, dials = await send(msg_query(82), 82, 8)
@@ -538,22 +538,22 @@ async def main():
                 dials = pushed
             else:
                 _err, dials = await send(msg_query(82), 82, 8)
-        print("mostrador final", dials, flush=True)
+        print("Final dial", dials, flush=True)
         if not any(d.get("id") == PIC and d.get("type") == 1 for d in dials or []):
             raise RuntimeError(
-                f"Transferencia concluida, mas a face {PIC} nao ativou no relogio. "
-                f"Mostrador atual: {dials}. Verifique o modulo e os recursos do bin."
+                f"Transfer complete, but face {PIC} did not activate on the watch. "
+                f"Current dial: {dials}. Check the module and resources in the binary."
             )
-        print("face instalada e ativa", PIC, flush=True)
+        print("Face installed and active", PIC, flush=True)
         _err, listed = await send(msg_query(93), 93, 6)
-        print("lista final", listed, flush=True)
+        print("Final dial list", listed, flush=True)
     finally:
         if paired:
             try:
                 await client.unpair()
-                print("DESPAREADO", flush=True)
+                print("UNPAIRED", flush=True)
             except Exception as exc:
-                print("desparear", type(exc).__name__, exc, flush=True)
+                print("[WARNING] Unpairing failed", type(exc).__name__, exc, flush=True)
         if client.is_connected:
             await client.disconnect()
         print("DISCONNECTED", flush=True)

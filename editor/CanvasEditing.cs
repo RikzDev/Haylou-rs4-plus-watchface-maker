@@ -113,8 +113,8 @@ public partial class MainWindow
         {
             Widget widget => $"{widget.Label} · {bounds.Width:F0} × {bounds.Height:F0}",
             AnimationItem image => image == _selectedAnimation && _animationPreviewMode == "frame"
-                ? $"{image.Label} · mover quadro; tamanho da sequência" : $"{image.Label} · {bounds.Width:F0} × {bounds.Height:F0}",
-            _ => "Ponteiro · proporção preservada",
+                ? $"{image.Label} · move this frame; resize the sequence" : $"{image.Label} · {bounds.Width:F0} × {bounds.Height:F0}",
+            _ => "Clock hand · proportions preserved",
         };
         Canvas.SetLeft(_selectionCaption, Math.Clamp(bounds.X, 0, ScreenWidth - 100));
         Canvas.SetTop(_selectionCaption, bounds.Y > 18 ? bounds.Y - 18 : bounds.Bottom + 6);
@@ -256,7 +256,7 @@ public partial class MainWindow
     {
         if (widget.CharacterImages.Count > 0 || !string.IsNullOrEmpty(widget.FontFile)) return true;
         var font = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Fonts), "consola.ttf");
-        if (!File.Exists(font)) { Log("Não achei a fonte Consolas para redimensionar esse texto."); return false; }
+        if (!File.Exists(font)) { Log("Consolas font not found. This text cannot be resized.", LogLevel.Error); return false; }
         widget.FontFile = font;
         return true;
     }

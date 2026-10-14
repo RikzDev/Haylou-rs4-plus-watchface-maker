@@ -58,7 +58,7 @@ public partial class MainWindow
         {
             if (!string.IsNullOrEmpty(widget.FontFile)) RegisterFont(widget.FontFile);
             if (widget.CharacterImages.Count > 0 && !_availableFonts.Any(font => SameCharacters(font.Characters, widget.CharacterImages)))
-                _availableFonts.Add(new FontAsset { Label = widget.Label + " · caracteres PNG", Characters = new(widget.CharacterImages) });
+                _availableFonts.Add(new FontAsset { Label = widget.Label + " · PNG characters", Characters = new(widget.CharacterImages) });
         }
         var filling = _filling; _filling = true;
         FontChoiceBox.ItemsSource = null;
@@ -98,10 +98,10 @@ public partial class MainWindow
     void LoadFontClick(object sender, RoutedEventArgs e)
     {
         if (_selected == null) return;
-        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Carregar fonte para o texto", Filter = "Fontes (*.ttf;*.otf)|*.ttf;*.otf" };
+        var dialog = new Microsoft.Win32.OpenFileDialog { Title = "Load a font for the text", Filter = "Fonts (*.ttf;*.otf)|*.ttf;*.otf" };
         if (dialog.ShowDialog() != true) return;
         try { LoadCustomFont(dialog.FileName); }
-        catch (Exception ex) { Log("Não consegui carregar a fonte: " + ex.Message); }
+        catch (Exception ex) { Log("Could not load the font: " + ex.Message, LogLevel.Error); }
     }
 
     void LoadCustomFont(string path)
@@ -114,6 +114,6 @@ public partial class MainWindow
         var font = RegisterFont(file);
         RefreshFontChoices();
         if (_selected != null) ApplyFont(_selected, font);
-        Log("Fonte carregada: " + Path.GetFileName(path));
+        Log("Font loaded: " + Path.GetFileName(path));
     }
 }

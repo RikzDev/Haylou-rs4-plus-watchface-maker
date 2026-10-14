@@ -1,7 +1,7 @@
 <Window x:Class="HaylouFaceEditor.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Editor de face RS4 Plus"
+        Title="RS4 Plus Watchface Editor"
         Width="1180"
         Height="860"
         MinWidth="980"
@@ -23,65 +23,65 @@
             <TextBlock DockPanel.Dock="Top" FontSize="24" FontWeight="SemiBold" Text="RS4 Plus"/>
             <TextBlock DockPanel.Dock="Top" Margin="0,4,0,16" Foreground="{StaticResource Muted}"
                        TextWrapping="Wrap"
-                       Text="Clique para selecionar. Arraste para mover e use as alças para redimensionar. Shift mantém a proporção; Esc cancela."/>
+                       Text="Click to select. Drag to move and use the handles to resize. Shift keeps proportions; Esc cancels."/>
             <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
-                <Button x:Name="ImportButton" Content="Importar TBWF" Margin="0,0,0,8" Click="ImportClick"/>
-                <Button x:Name="OpenButton" Content="Abrir projeto" Margin="0,0,0,8" Click="OpenClick"/>
-                <Button x:Name="SaveProjectButton" Content="Salvar projeto" Margin="0,0,0,8" Click="SaveProjectClick"/>
-                <Button x:Name="SaveBinButton" Content="Gerar .bin" Margin="0,0,0,8" Click="SaveBinClick"/>
-                <Button x:Name="SendButton" Content="Enviar ao relógio" Margin="0,0,0,8" Click="SendClick"/>
+                <Button x:Name="ImportButton" Content="Import TBWF" Margin="0,0,0,8" Click="ImportClick"/>
+                <Button x:Name="OpenButton" Content="Open project" Margin="0,0,0,8" Click="OpenClick"/>
+                <Button x:Name="SaveProjectButton" Content="Save project" Margin="0,0,0,8" Click="SaveProjectClick"/>
+                <Button x:Name="SaveBinButton" Content="Generate .bin" Margin="0,0,0,8" Click="SaveBinClick"/>
+                <Button x:Name="SendButton" Content="Send to watch" Margin="0,0,0,8" Click="SendClick"/>
                 <Button x:Name="RecoveryButton" Content="Recovery (factory reset)" Click="RecoveryClick"/>
                 <TextBlock Margin="0,8,0,0" Foreground="{StaticResource Muted}" TextWrapping="Wrap"
-                           Text="Fontes e caracteres PNG são enviados como imagens para manter tamanho e posição."/>
+                           Text="Fonts and PNG characters are exported as images to preserve size and position."/>
             </StackPanel>
             <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
                 <StackPanel>
-                    <TextBlock Text="Pacote" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/>
-                    <TextBlock Text="ID inicial: 253 · troca automática se ocupado" TextWrapping="Wrap" Margin="0,0,0,8"/>
-                    <TextBlock Text="Nome no arquivo (até 15 bytes)"/>
-                    <TextBox x:Name="NameBox" Margin="0,4,0,8" Text="minha_face"/>
-                    <TextBlock Text="Título no relógio"/>
+                    <TextBlock Text="Package" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/>
+                    <TextBlock Text="Starting ID: 253 · switches automatically if occupied" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                    <TextBlock Text="Package name (up to 15 bytes)"/>
+                    <TextBox x:Name="NameBox" Margin="0,4,0,8" Text="my_face"/>
+                    <TextBlock Text="Watch title"/>
                     <TextBox x:Name="TitleBox" Margin="0,4,0,0" Text="VS Code"/>
                 </StackPanel>
             </Border>
             <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
                 <StackPanel>
                     <DockPanel Margin="0,0,0,8">
-                        <TextBlock DockPanel.Dock="Left" Text="Sequências de imagens" Foreground="{StaticResource Muted}"/>
-                        <TextBlock x:Name="AnimationInfo" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" Text="nenhuma"/>
+                        <TextBlock DockPanel.Dock="Left" Text="Image sequences" Foreground="{StaticResource Muted}"/>
+                        <TextBlock x:Name="AnimationInfo" DockPanel.Dock="Right" Foreground="{StaticResource Muted}" Text="none" TextAlignment="Right" Margin="8,0,0,0"/>
                     </DockPanel>
                     <ListBox x:Name="AnimationList" Height="76" DisplayMemberPath="Label" SelectionChanged="AnimationSelected" Margin="0,0,0,8"/>
                     <UniformGrid Columns="3" Margin="0,0,0,8">
-                        <Button x:Name="AddAnimationButton" Content="Sequência" Margin="0,0,3,0" Click="AddAnimationClick"/>
-                        <Button x:Name="AddStaticImageButton" Content="Imagem fixa" Margin="3,0" Click="AddStaticImageClick"/>
-                        <Button x:Name="RemoveAnimationButton" Content="Remover" Margin="3,0,0,0" Click="RemoveAnimationClick"/>
+                        <Button x:Name="AddAnimationButton" Content="Sequence" Margin="0,0,3,0" Click="AddAnimationClick"/>
+                        <Button x:Name="AddStaticImageButton" Content="Image" ToolTip="Add a fixed image" Margin="3,0" Click="AddStaticImageClick"/>
+                        <Button x:Name="RemoveAnimationButton" Content="Remove" Margin="3,0,0,0" Click="RemoveAnimationClick"/>
                     </UniformGrid>
-                    <TextBlock Text="Nome"/>
+                    <TextBlock Text="Name"/>
                     <TextBox x:Name="AnimationNameBox" Margin="0,4,0,8" TextChanged="AnimationChanged"/>
-                    <TextBlock Text="Modo"/>
+                    <TextBlock Text="Mode"/>
                     <ComboBox x:Name="AnimationSourceBox" Margin="0,4,0,8" SelectionChanged="AnimationChanged"/>
-                    <TextBlock Text="Prévia da sequência"/>
+                    <TextBlock Text="Sequence preview"/>
                     <UniformGrid Columns="2" Margin="0,4,0,6">
                         <ComboBox x:Name="AnimationPreviewModeBox" Margin="0,0,4,0" SelectionChanged="AnimationPreviewModeChanged">
-                            <ComboBoxItem Tag="live" Content="Dados atuais"/>
-                            <ComboBoxItem Tag="loop" Content="Reproduzir ciclo"/>
-                            <ComboBoxItem Tag="frame" Content="Quadro no cursor"/>
+                            <ComboBoxItem Tag="live" Content="Live data"/>
+                            <ComboBoxItem Tag="loop" Content="Play loop"/>
+                            <ComboBoxItem Tag="frame" Content="Single frame"/>
                         </ComboBox>
-                        <Button x:Name="AnimationPlayButton" Content="Pausar" Margin="4,0,0,0" Click="AnimationPlayClick"/>
+                        <Button x:Name="AnimationPlayButton" Content="Pause" Margin="4,0,0,0" Click="AnimationPlayClick"/>
                     </UniformGrid>
                     <Slider x:Name="AnimationFrameSlider" Minimum="0" Maximum="0" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="AnimationFrameSliderChanged"/>
-                    <TextBlock x:Name="AnimationFrameInfo" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,3,0,8" Text="Selecione uma sequência"/>
+                    <TextBlock x:Name="AnimationFrameInfo" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,3,0,8" Text="Select a sequence"/>
                     <UniformGrid Columns="2" Margin="0,0,0,8">
                         <StackPanel Margin="0,0,8,0"><TextBlock Text="X"/><TextBox x:Name="AnimationXBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
                         <StackPanel><TextBlock Text="Y"/><TextBox x:Name="AnimationYBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
                     </UniformGrid>
                     <UniformGrid Columns="2" Margin="0,0,0,8">
-                        <StackPanel Margin="0,0,8,0"><TextBlock Text="Largura"/><TextBox x:Name="AnimationWidthBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
-                        <StackPanel><TextBlock Text="Altura"/><TextBox x:Name="AnimationHeightBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
+                        <StackPanel Margin="0,0,8,0"><TextBlock Text="Width"/><TextBox x:Name="AnimationWidthBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
+                        <StackPanel><TextBlock Text="Height"/><TextBox x:Name="AnimationHeightBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
                     </UniformGrid>
-                    <TextBlock Text="Intervalo (ms)"/>
+                    <TextBlock Text="Interval (ms)"/>
                     <TextBox x:Name="AnimationIntervalBox" Margin="0,4,0,8" TextChanged="AnimationChanged"/>
-                    <TextBlock Text="Quadros — clique para inspecionar ou ajustar"/>
+                    <TextBlock Text="Frames — click to inspect or adjust"/>
                     <ListBox x:Name="FrameList" Height="148" SelectionChanged="FrameSelected" Margin="0,4,0,8" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
@@ -97,48 +97,48 @@
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-                    <TextBlock Text="Ajuste do quadro selecionado"/>
+                    <TextBlock Text="Selected frame alignment"/>
                     <UniformGrid Columns="2" Margin="0,4,0,8">
-                        <StackPanel Margin="0,0,8,0"><TextBlock Text="Deslocamento X"/><TextBox x:Name="FrameOffsetXBox" Margin="0,4,0,0" TextChanged="FrameOffsetChanged"/></StackPanel>
-                        <StackPanel><TextBlock Text="Deslocamento Y"/><TextBox x:Name="FrameOffsetYBox" Margin="0,4,0,0" TextChanged="FrameOffsetChanged"/></StackPanel>
+                        <StackPanel Margin="0,0,8,0"><TextBlock Text="X offset"/><TextBox x:Name="FrameOffsetXBox" Margin="0,4,0,0" TextChanged="FrameOffsetChanged"/></StackPanel>
+                        <StackPanel><TextBlock Text="Y offset"/><TextBox x:Name="FrameOffsetYBox" Margin="0,4,0,0" TextChanged="FrameOffsetChanged"/></StackPanel>
                     </UniformGrid>
                     <UniformGrid Columns="2" Margin="0,0,0,8">
-                        <Button x:Name="AddFrameButton" Content="Adicionar quadros" Margin="0,0,4,4" Click="AddFramesToAnimationClick"/>
-                        <Button x:Name="RemoveFrameButton" Content="Remover quadro" Margin="4,0,0,4" Click="RemoveFrameClick"/>
-                        <Button x:Name="MoveFrameUpButton" Content="↑ Subir" Margin="0,4,4,0" Click="MoveFrameUpClick"/>
-                        <Button x:Name="MoveFrameDownButton" Content="↓ Descer" Margin="4,4,0,0" Click="MoveFrameDownClick"/>
+                        <Button x:Name="AddFrameButton" Content="Add frames" Margin="0,0,4,4" Click="AddFramesToAnimationClick"/>
+                        <Button x:Name="RemoveFrameButton" Content="Remove frame" Margin="4,0,0,4" Click="RemoveFrameClick"/>
+                        <Button x:Name="MoveFrameUpButton" Content="↑ Move up" Margin="0,4,4,0" Click="MoveFrameUpClick"/>
+                        <Button x:Name="MoveFrameDownButton" Content="↓ Move down" Margin="4,4,0,0" Click="MoveFrameDownClick"/>
                     </UniformGrid>
-                    <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" Text="Os modos escolhem um quadro a partir dos dados atuais. Bateria usa 0–100%; os demais usam o resto da divisão pela quantidade de quadros. Dia da semana segue domingo–sábado."/>
+                    <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" Text="Modes select a frame from the current data. Battery uses 0–100%; other modes use the value modulo the frame count. Weekdays run Sunday–Saturday."/>
                 </StackPanel>
             </Border>
             <Border Background="{StaticResource Panel}" CornerRadius="12" Padding="14">
                 <StackPanel>
                     <DockPanel Margin="0,0,0,12">
                         <StackPanel DockPanel.Dock="Left">
-                            <TextBlock Text="EDITOR DE FUNÇÕES" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/>
-                            <TextBlock x:Name="SelectedName" FontSize="18" FontWeight="SemiBold" Text="Nenhum item selecionado" Margin="0,3,0,0"/>
+                            <TextBlock Text="ELEMENT EDITOR" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Accent}"/>
+                            <TextBlock x:Name="SelectedName" FontSize="18" FontWeight="SemiBold" Text="No element selected" Margin="0,3,0,0"/>
                         </StackPanel>
                     </DockPanel>
 
-                    <TextBlock Text="Escolha a informação e ajuste o texto diretamente no mostrador ou pelos campos abaixo."
+                    <TextBlock Text="Choose the data source and adjust the text on the watch preview or using the fields below."
                                Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,0,0,12"/>
                     <UniformGrid Columns="2" Margin="0,0,0,8">
-                        <Button x:Name="AddButton" Content="Novo texto" Margin="0,0,4,0" Click="AddClick"/>
-                        <Button x:Name="RemoveButton" Content="Remover" Margin="4,0,0,0" Click="RemoveClick"/>
+                        <Button x:Name="AddButton" Content="New text" Margin="0,0,4,0" Click="AddClick"/>
+                        <Button x:Name="RemoveButton" Content="Remove" Margin="4,0,0,0" Click="RemoveClick"/>
                     </UniformGrid>
 
                     <Border Background="#1B1916" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
                         <StackPanel>
-                            <TextBlock Text="FONTE DE DADOS" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
+                            <TextBlock Text="DATA SOURCE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
                             <ComboBox x:Name="FunctionBox" Background="#332F29" Foreground="{StaticResource Ink}" BorderBrush="{StaticResource Line}" Padding="8,5" SelectionChanged="FunctionChanged"/>
-                            <TextBlock Text="Tempo, atividade e valores são atualizados no relógio." Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0" TextWrapping="Wrap"/>
+                            <TextBlock Text="Time, activity and values update on the watch." Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
                     <Border Background="#1B1916" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
                         <StackPanel>
                             <DockPanel Margin="0,0,0,7">
-                                <TextBlock DockPanel.Dock="Left" Text="POSIÇÃO" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
+                                <TextBlock DockPanel.Dock="Left" Text="POSITION" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}"/>
                                 <TextBlock DockPanel.Dock="Right" Text="pixels · 368 × 448" FontSize="11" Foreground="{StaticResource Muted}"/>
                             </DockPanel>
                             <UniformGrid Columns="2">
@@ -156,34 +156,34 @@
 
                     <Border Background="#1B1916" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8" Padding="10" Margin="0,0,0,8">
                         <StackPanel>
-                            <TextBlock Text="APARÊNCIA" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/>
-                            <TextBlock Text="Fonte do texto" Foreground="{StaticResource Muted}" FontSize="11"/>
+                            <TextBlock Text="APPEARANCE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,0,0,7"/>
+                            <TextBlock Text="Text font" Foreground="{StaticResource Muted}" FontSize="11"/>
                             <ComboBox x:Name="FontChoiceBox" Margin="0,3,0,7" SelectionChanged="FontChoiceChanged"/>
-                            <Button x:Name="LoadFontButton" Content="Carregar fonte (.ttf / .otf)" Margin="0,0,0,10" Click="LoadFontClick"/>
+                            <Button x:Name="LoadFontButton" Content="Load font (.ttf / .otf)" Margin="0,0,0,10" Click="LoadFontClick"/>
                             <UniformGrid Columns="2">
                                 <StackPanel Margin="0,0,5,0">
-                                    <TextBlock Text="Tamanho" Foreground="{StaticResource Muted}" FontSize="11"/>
+                                    <TextBlock Text="Size" Foreground="{StaticResource Muted}" FontSize="11"/>
                                     <TextBox x:Name="SizeBox" Margin="0,3,0,0" TextChanged="FontSizeChanged"/>
                                 </StackPanel>
                                 <StackPanel Margin="5,0,0,0">
-                                    <TextBlock Text="Cor #RRGGBB" Foreground="{StaticResource Muted}" FontSize="11"/>
+                                    <TextBlock Text="Color #RRGGBB" Foreground="{StaticResource Muted}" FontSize="11"/>
                                     <TextBox x:Name="ColorBox" Margin="0,3,0,0" TextChanged="ColorChanged"/>
                                 </StackPanel>
                             </UniformGrid>
-                            <TextBlock x:Name="CharacterInfo" Text="Texto com fonte." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/>
-                            <TextBlock Text="Espaço entre caracteres (px)" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0"/>
+                            <TextBlock x:Name="CharacterInfo" Text="Font text." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0"/>
+                            <TextBlock Text="Character spacing (px)" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0"/>
                             <TextBox x:Name="CharacterSpacingBox" Text="0" IsEnabled="False" Margin="0,3,0,0" TextChanged="CharacterSpacingChanged"/>
-                            <TextBlock Text="Positivo afasta os caracteres; negativo aproxima."
+                            <TextBlock Text="Positive values separate characters; negative values bring them closer."
                                        Foreground="{StaticResource Muted}" FontSize="11" Margin="0,5,0,0" TextWrapping="Wrap"/>
-                            <TextBlock Text="A prévia usa os mesmos caracteres e posições enviados ao relógio."
+                            <TextBlock Text="The preview uses the same characters and positions exported to the watch."
                                        Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
 
                     <Border Background="#1B1916" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="8" Padding="10">
                         <StackPanel>
-                            <TextBlock Text="AMOSTRA OU TEXTO FIXO" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
-                            <TextBox x:Name="SampleBox" MaxLength="12" ToolTip="Até 12 caracteres por texto" TextChanged="SampleChanged"/>
+                            <TextBlock Text="SAMPLE OR FIXED TEXT" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,0,0,6"/>
+                            <TextBox x:Name="SampleBox" MaxLength="12" ToolTip="Up to 12 characters per text element" TextChanged="SampleChanged"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -205,11 +205,19 @@
         </Border>
 
         <DockPanel Grid.Column="2" Margin="16,0,0,0">
-            <TextBlock DockPanel.Dock="Top" Text="Saída" FontWeight="SemiBold" Margin="0,0,0,8"/>
-            <TextBox x:Name="LogBox" AcceptsReturn="True" IsReadOnly="True" TextWrapping="Wrap"
+            <TextBlock DockPanel.Dock="Top" Text="Output" FontWeight="SemiBold" Margin="0,0,0,8"/>
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                <TextBlock Text="Info" Foreground="White" FontSize="11" Margin="0,0,12,4"/>
+                <TextBlock Text="Warning" Foreground="Gold" FontSize="11" Margin="0,0,12,4"/>
+                <TextBlock Text="Error" Foreground="Red" FontSize="11" Margin="0,0,12,4"/>
+                <TextBlock Text="Upload note" Foreground="DeepSkyBlue" FontSize="11" Margin="0,0,0,4"/>
+            </WrapPanel>
+            <RichTextBox x:Name="LogBox" IsReadOnly="True"
                      VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12"
                      Background="{StaticResource Panel}" Foreground="{StaticResource Ink}"
-                     BorderBrush="{StaticResource Line}" Padding="8"/>
+                     BorderBrush="{StaticResource Line}" Padding="8">
+                <FlowDocument PagePadding="0"/>
+            </RichTextBox>
         </DockPanel>
     </Grid>
 </Window>

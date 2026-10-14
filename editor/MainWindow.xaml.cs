@@ -58,15 +58,15 @@ public partial class MainWindow : Window
     void LoadDefaults()
     {
         _widgets.Clear();
-        Add("hour", "Hora", 285, 185, "#CE8349", "12", 29, "hour");
-        Add("colon", "Dois pontos", 304, 183, "#CE8349", ":", 29, "text");
-        Add("minute", "Minuto", 322, 185, "#CE8349", "34", 29, "minute");
-        Add("month", "Mês", 285, 214, "#CE8349", "10", 24, "month");
-        Add("slash", "Barra", 305, 212, "#CE8349", "/", 24, "text");
-        Add("day", "Dia", 322, 214, "#CE8349", "12", 24, "day");
-        Add("heart", "Batimentos", 259, 270, "#B0C8A3", "72", 22, "heart");
-        Add("steps", "Passos", 259, 299, "#B0C8A3", "1234", 22, "steps");
-        Add("battery", "Bateria", 259, 325, "#B0C8A3", "15", 22, "battery");
+        Add("hour", "Hour", 285, 185, "#CE8349", "12", 29, "hour");
+        Add("colon", "Colon", 304, 183, "#CE8349", ":", 29, "text");
+        Add("minute", "Minute", 322, 185, "#CE8349", "34", 29, "minute");
+        Add("month", "Month", 285, 214, "#CE8349", "10", 24, "month");
+        Add("slash", "Slash", 305, 212, "#CE8349", "/", 24, "text");
+        Add("day", "Day", 322, 214, "#CE8349", "12", 24, "day");
+        Add("heart", "Heart rate", 259, 270, "#B0C8A3", "72", 22, "heart");
+        Add("steps", "Steps", 259, 299, "#B0C8A3", "1234", 22, "steps");
+        Add("battery", "Battery", 259, 325, "#B0C8A3", "15", 22, "battery");
         FillFunctions();
     }
 
@@ -79,34 +79,34 @@ public partial class MainWindow : Window
 
     static readonly SourceChoice[] Choices =
     {
-        new("Texto fixo", "text"),
-        new("Hora", "hour"),
-        new("Minuto", "minute"),
-        new("Segundo", "second"),
-        new("Mês", "month"),
-        new("Dia", "day"),
-        new("Dia da semana", "wday"),
-        new("Passos", "steps"),
-        new("Batimentos", "heart"),
-        new("Bateria", "battery"),
-        new("Temperatura (clima)", "temperature"),
-        new("Valor ÷ 1000", "scaled"),
+        new("Fixed text", "text"),
+        new("Hour", "hour"),
+        new("Minute", "minute"),
+        new("Second", "second"),
+        new("Month", "month"),
+        new("Day", "day"),
+        new("Weekday", "wday"),
+        new("Steps", "steps"),
+        new("Heart rate", "heart"),
+        new("Battery", "battery"),
+        new("Temperature (weather)", "temperature"),
+        new("Value ÷ 1000", "scaled"),
     };
 
     static readonly AnimationChoice[] AnimationChoices =
     {
-        new("Imagem fixa", "static"),
-        new("Loop contínuo", "loop"),
-        new("Bateria", "battery"),
-        new("Dia da semana", "weekday"),
-        new("Dia do mês", "day"),
-        new("Mês", "month"),
-        new("Segundo", "second"),
-        new("Minuto", "minute"),
-        new("Hora (12h)", "hour"),
-        new("Passos", "steps"),
-        new("Batimentos", "heart"),
-        new("Valor ÷ 1000", "scaled"),
+        new("Fixed image", "static"),
+        new("Continuous loop", "loop"),
+        new("Battery", "battery"),
+        new("Weekday", "weekday"),
+        new("Day of month", "day"),
+        new("Month", "month"),
+        new("Second", "second"),
+        new("Minute", "minute"),
+        new("Hour (12h)", "hour"),
+        new("Steps", "steps"),
+        new("Heart rate", "heart"),
+        new("Value ÷ 1000", "scaled"),
     };
 
     void FillAnimationSources()
@@ -287,7 +287,7 @@ public partial class MainWindow : Window
         ShowFontChoice();
         if (_selected == null)
         {
-            SelectedName.Text = "nenhum";
+            SelectedName.Text = "none";
             XBox.Text = "";
             YBox.Text = "";
             ColorBox.Text = "";
@@ -309,9 +309,9 @@ public partial class MainWindow : Window
             SizeBox.Text = ((int)Math.Round(_selected.Size)).ToString();
             FunctionBox.SelectedItem = Choices.FirstOrDefault(choice => choice.Key == _selected.Source) ?? Choices[0];
             var images = _selected.CharacterImages.Count > 0;
-            CharacterInfo.Text = images ? $"Caracteres em imagens: {_selected.CharacterImages.Count}. As cores originais são preservadas." : "Texto com fonte.";
+            CharacterInfo.Text = images ? $"PNG characters: {_selected.CharacterImages.Count}. Original colors are preserved." : "Font text.";
             if (_selected.Source == "temperature")
-                CharacterInfo.Text += " Clima sincronizado pelo celular; usa °C ou °F conforme o relógio. Sem dados: --.";
+                CharacterInfo.Text += " Weather synchronized by the phone; uses the watch's °C/°F setting. No data: --.";
             CharacterSpacingBox.Text = _selected.CharacterSpacing.ToString();
             CharacterSpacingBox.IsEnabled = true;
             ColorBox.IsEnabled = !images;
@@ -390,11 +390,11 @@ public partial class MainWindow : Window
         var widget = new Widget
         {
             Key = "text" + (_widgets.Count + 1),
-            Label = "Texto " + (_widgets.Count + 1),
+            Label = "Text " + (_widgets.Count + 1),
             X = 24,
             Y = 24,
             Color = "#F3EDE4",
-            Sample = "texto",
+            Sample = "text",
             Size = 24,
             Source = "text",
             FontFile = _selected?.FontFile ?? _availableFonts.FirstOrDefault(font => font.File != DefaultFontPath && font.File != null)?.File ?? DefaultFontPath,
@@ -421,19 +421,19 @@ public partial class MainWindow : Window
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Imagens (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
+            Filter = "Images (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
             Multiselect = true,
-            Title = "Escolher os quadros da animação",
+            Title = "Choose animation frames",
         };
         if (dialog.ShowDialog() != true || dialog.FileNames.Length < 1)
         {
-            Log("Escolha ao menos um quadro para a imagem ou sequência.");
+            Log("Select at least one frame for the image or sequence.", LogLevel.Warning);
             return;
         }
         var previews = dialog.FileNames.Select(LoadBitmap).ToList();
         _animations.Add(new AnimationItem
         {
-            Label = "Animação " + (_animations.Count + 1),
+            Label = "Animation " + (_animations.Count + 1),
             Frames = dialog.FileNames.ToList(),
             Previews = previews,
             FrameOffsets = previews.Select(_ => new FrameOffset()).ToList(),
@@ -453,16 +453,16 @@ public partial class MainWindow : Window
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Imagens (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
+            Filter = "Images (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
             Multiselect = false,
-            Title = "Escolher imagem fixa",
+            Title = "Choose a fixed image",
         };
         if (dialog.ShowDialog() != true || string.IsNullOrWhiteSpace(dialog.FileName))
             return;
         var preview = LoadBitmap(dialog.FileName);
         _animations.Add(new AnimationItem
         {
-            Label = "Imagem fixa " + (_animations.Count + 1),
+            Label = "Fixed image " + (_animations.Count + 1),
             Frames = new List<string> { dialog.FileName },
             Previews = new List<BitmapSource> { preview },
             FrameOffsets = new List<FrameOffset> { new() },
@@ -525,7 +525,7 @@ public partial class MainWindow : Window
         AnimationList.ItemsSource = null;
         AnimationList.ItemsSource = _animations;
         AnimationInfo.Text = _animations.Count == 0
-            ? "nenhuma"
+            ? "none"
             : $"{_animations.Count} item(ns)";
         ShowAnimation(selected);
     }
@@ -637,7 +637,7 @@ public partial class MainWindow : Window
         if (count == 0)
         {
             AnimationFrameSlider.Value = 0;
-            AnimationFrameInfo.Text = "Selecione uma sequência";
+            AnimationFrameInfo.Text = "Select a sequence";
         }
         else
         {
@@ -645,12 +645,12 @@ public partial class MainWindow : Window
             AnimationFrameSlider.Value = index;
             AnimationFrameInfo.Text = _animationPreviewMode switch
             {
-                "live" => $"Dados atuais · quadro {index + 1} de {count}",
-                "loop" => _animationPreviewPlaying ? $"Reproduzindo · {count} quadros" : $"Ciclo pausado · quadro {index + 1} de {count}",
-                _ => $"Quadro {index + 1} de {count}",
+                "live" => $"Live data · quadro {index + 1} de {count}",
+                "loop" => _animationPreviewPlaying ? $"Playing · {count} frames" : $"Loop paused · frame {index + 1} of {count}",
+                _ => $"Frame {index + 1} of {count}",
             };
         }
-        AnimationPlayButton.Content = _animationPreviewPlaying ? "Pausar" : "Reproduzir";
+        AnimationPlayButton.Content = _animationPreviewPlaying ? "Pause" : "Play";
         _filling = false;
     }
 
@@ -720,9 +720,9 @@ public partial class MainWindow : Window
         }
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Imagens (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
+            Filter = "Images (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg",
             Multiselect = true,
-            Title = "Adicionar quadros à sequência",
+            Title = "Add frames to the sequence",
         };
         if (dialog.ShowDialog() != true || dialog.FileNames.Length == 0)
             return;
@@ -745,7 +745,7 @@ public partial class MainWindow : Window
             return;
         if (_selectedAnimation.Frames.Count <= 1)
         {
-            Log("A imagem precisa manter ao menos um quadro.");
+            Log("The image must keep at least one frame.", LogLevel.Warning);
             return;
         }
         _selectedAnimation.Frames.RemoveAt(_selectedFrameIndex);
@@ -801,18 +801,18 @@ public partial class MainWindow : Window
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Filter = "TBWF (*.tbwf)|*.tbwf",
-            Title = "Importar TBWF",
+            Title = "Import TBWF",
         };
         if (dialog.ShowDialog() != true)
             return;
         try
         {
             ImportTbwf(dialog.FileName);
-            Log($"Importei {dialog.FileName}");
+            Log($"Imported {dialog.FileName}");
         }
         catch (Exception ex)
         {
-            Log("erro: " + ex.Message);
+            Log("Error: " + ex.Message, LogLevel.Error);
         }
     }
 
@@ -826,7 +826,7 @@ public partial class MainWindow : Window
             entry.FullName.Replace('\\', '/').EndsWith("/resourceImage/dial.png", StringComparison.OrdinalIgnoreCase)
             || entry.FullName.EndsWith("dial.png", StringComparison.OrdinalIgnoreCase));
         if (jsonEntry == null || pngEntry == null)
-            throw new InvalidDataException("o tbwf não tem TiBoWaFe.json e dial.png");
+            throw new InvalidDataException("The TBWF does not contain TiBoWaFe.json and dial.png");
         using var jsonStream = jsonEntry.Open();
         using var reader = new StreamReader(jsonStream);
         var document = JsonDocument.Parse(reader.ReadToEnd());
@@ -856,12 +856,12 @@ public partial class MainWindow : Window
             ImportUnreferencedFixedImages(zip, claimedImages);
         }
         if (_widgets.Count == 0)
-            Add("day", "Dia", 160, 300, "#FFFFFF", "12", 24, "day");
+            Add("day", "Day", 160, 300, "#FFFFFF", "12", 24, "day");
         var ratio = bitmap.PixelWidth / (double)bitmap.PixelHeight;
         if (Math.Abs(ratio - (ScreenWidth / (double)ScreenHeight)) > 0.02)
-            Log($"Esse desenho é {bitmap.PixelWidth}x{bitmap.PixelHeight}, não é o formato do RS4. Vou encaixar em 368x448.");
+            Log($"This design is {bitmap.PixelWidth}x{bitmap.PixelHeight}, with a different aspect ratio. Fitting it to 368x448.", LogLevel.Warning);
         else if (bitmap.PixelWidth != ScreenWidth)
-            Log($"Reduzi {bitmap.PixelWidth}x{bitmap.PixelHeight} para 368x448.");
+            Log($"Resized {bitmap.PixelWidth}x{bitmap.PixelHeight} to 368x448.");
         _savedBin = null;
         RefreshFontChoices();
         RefreshAnimations(_animations.FirstOrDefault());
@@ -909,10 +909,10 @@ public partial class MainWindow : Window
                 CharacterPreviews = characters.ToDictionary(pair => pair.Key, pair => LoadBitmap(pair.Value)),
             });
             if (characters.Count > 0)
-                Log($"{property.Name}: {characters.Count} caracteres em imagens, função {source}.");
+                Log($"{property.Name}: {characters.Count} PNG characters, data source {source}.");
         }
         if (fonts.Count > 0)
-            Log("Fonte " + string.Join(", ", fonts) + ". Vou desenhar os números e as letras que o texto usa.");
+            Log("Font " + string.Join(", ", fonts) + ". Rasterizing the characters used by the text.");
         _widgets.Clear();
         _widgets.AddRange(imported);
         _selected = _widgets.FirstOrDefault();
@@ -931,7 +931,7 @@ public partial class MainWindow : Window
             return new();
         var path = resource.TryGetProperty("resource", out var value) ? value.GetString() : null;
         if (string.IsNullOrWhiteSpace(path))
-            throw new InvalidDataException("resourceCharacter sem caminho de imagens.");
+            throw new InvalidDataException("resourceCharacter has no image path.");
         var normalized = path.Replace('\\', '/').TrimStart('/');
         if (cache.TryGetValue(normalized, out var existing))
             return existing;
@@ -943,7 +943,7 @@ public partial class MainWindow : Window
                     : name.Equals(normalized, StringComparison.OrdinalIgnoreCase));
         }).ToList();
         if (entries.Count == 0)
-            throw new InvalidDataException($"Não achei as imagens de caracteres em {path}.");
+            throw new InvalidDataException($"Character images not found at {path}.");
         Directory.CreateDirectory(folder);
         var result = new Dictionary<string, string>();
         void AddCharacter(string character, BitmapSource image)
@@ -958,7 +958,7 @@ public partial class MainWindow : Window
         if (entries.Count == 1 && sections > 1)
         {
             if (sections != 10)
-                throw new InvalidDataException("Faixas de caracteres precisam conter os 10 dígitos em ordem 0–9.");
+                throw new InvalidDataException("Character strips must contain all 10 digits in 0–9 order.");
             var frames = SplitFrames(ReadZipBitmap(entries[0]), sections);
             for (var index = 0; index < frames.Count; index++)
                 AddCharacter(index.ToString(), frames[index]);
@@ -969,7 +969,7 @@ public partial class MainWindow : Window
             {
                 var character = CharacterForFile(entry.Name);
                 if (character == null)
-                    throw new InvalidDataException($"Nome de caractere não reconhecido: {entry.Name}.");
+                    throw new InvalidDataException($"Unrecognized character filename: {entry.Name}.");
                 AddCharacter(character, ReadZipBitmap(entry));
             }
         }
@@ -1037,7 +1037,7 @@ public partial class MainWindow : Window
             entries = OrderAnimationEntries(property.Name, entries);
             if (entries.Count == 0)
             {
-                Log($"A animação {property.Name} usa {resourcePath}, mas os quadros não estão no TBWF.");
+                Log($"Animation {property.Name} uses {resourcePath}, but its frames are missing from the TBWF.", LogLevel.Warning);
                 continue;
             }
             foreach (var entry in entries)
@@ -1087,7 +1087,7 @@ public partial class MainWindow : Window
                     _ => "loop",
                 },
             });
-            Log($"Animação {property.Name}: {frames.Count} quadros.");
+            Log($"Animation {property.Name}: {frames.Count} frames.");
         }
         return claimedImages;
     }
@@ -1111,7 +1111,7 @@ public partial class MainWindow : Window
             SavePng(preview, file);
             _animations.Add(new AnimationItem
             {
-                Label = Path.GetFileNameWithoutExtension(images[index].Name) + " (fixa)",
+                Label = Path.GetFileNameWithoutExtension(images[index].Name) + " (fixed)",
                 Frames = new List<string> { file },
                 Previews = new List<BitmapSource> { preview },
                 FrameOffsets = new List<FrameOffset> { new() },
@@ -1123,7 +1123,7 @@ public partial class MainWindow : Window
             });
         }
         if (images.Count > 0)
-            Log($"Importei {images.Count} imagem(ns) fixa(s) sem elemento no TBWF.");
+            Log($"Imported {images.Count} fixed image(s) without a matching TBWF element.");
     }
 
     static List<ZipArchiveEntry> OrderAnimationEntries(string name, List<ZipArchiveEntry> entries)
@@ -1278,8 +1278,8 @@ public partial class MainWindow : Window
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Filter = "Projeto (*.hface.json)|*.hface.json",
-            Title = "Abrir projeto",
+            Filter = "Project (*.hface.json)|*.hface.json",
+            Title = "Open project",
         };
         if (dialog.ShowDialog() != true)
             return;
@@ -1289,14 +1289,14 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            Log("erro: " + ex.Message);
+            Log("Error: " + ex.Message, LogLevel.Error);
         }
     }
 
     void LoadProject(string path)
     {
         var project = JsonSerializer.Deserialize<ProjectFile>(File.ReadAllText(path))
-            ?? throw new InvalidDataException("projeto vazio");
+            ?? throw new InvalidDataException("Empty project");
         ResetFonts();
         foreach (var saved in project.Fonts)
         {
@@ -1327,7 +1327,7 @@ public partial class MainWindow : Window
             {
                 var characterPath = Path.Combine(Path.GetDirectoryName(path)!, pair.Value);
                 if (!File.Exists(characterPath))
-                    throw new InvalidDataException($"Imagem do caractere {pair.Key} não encontrada: {characterPath}");
+                    throw new InvalidDataException($"Character image {pair.Key} not found: {characterPath}");
                 widget.CharacterImages.Add(pair.Key, characterPath);
                 widget.CharacterPreviews.Add(pair.Key, LoadBitmap(characterPath));
             }
@@ -1339,7 +1339,7 @@ public partial class MainWindow : Window
         {
             var handFile = Path.Combine(Path.GetDirectoryName(path)!, saved.File);
             if (!File.Exists(handFile))
-                throw new InvalidDataException($"Imagem do ponteiro não encontrada: {handFile}");
+                throw new InvalidDataException($"Clock-hand image not found: {handFile}");
             var bitmap = LoadBitmap(handFile);
             _hands.Add(new HandItem
             {
@@ -1393,19 +1393,19 @@ public partial class MainWindow : Window
         RefreshAnimations(_animations.FirstOrDefault());
         Redraw();
         ShowSelection();
-        Log($"Abri {path}");
+        Log($"Opened {path}");
     }
 
     void SaveProjectClick(object sender, RoutedEventArgs e)
     {
         if (_fittedPng == null)
         {
-            Log("Importa um TBWF antes de salvar o projeto.");
+            Log("Import a TBWF before saving the project.", LogLevel.Warning);
             return;
         }
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
-            Filter = "Projeto (*.hface.json)|*.hface.json",
+            Filter = "Project (*.hface.json)|*.hface.json",
             FileName = NameBox.Text + ".hface.json",
         };
         if (dialog.ShowDialog() != true)
@@ -1532,14 +1532,14 @@ public partial class MainWindow : Window
         };
         File.WriteAllText(path, JsonSerializer.Serialize(project, new JsonSerializerOptions { WriteIndented = true }));
         _fittedPng = Path.Combine(folder, pngName);
-        Log($"Projeto salvo em {path}");
+        Log($"Project saved to {path}");
     }
 
     async void SaveBinClick(object sender, RoutedEventArgs e)
     {
         if (_fittedPng == null)
         {
-            Log("Importa um TBWF antes de gravar o bin.");
+            Log("Import a TBWF before generating the binary.", LogLevel.Warning);
             return;
         }
         var dialog = new Microsoft.Win32.SaveFileDialog
@@ -1558,26 +1558,27 @@ public partial class MainWindow : Window
         if (!await EnsureBin())
             return;
         var answer = MessageBox.Show(
-            "O Bluetooth do celular precisa estar desligado. O ID inicial é " + ReadId() +
-            ". Se estiver ocupado, o envio usa outro ID válido e preserva a face instalada.",
-            "Enviar",
+            "Turn off Bluetooth on your phone first. The starting ID is " + ReadId() +
+            ". If occupied, the uploader tries another valid ID and preserves the installed face.",
+            "Upload",
             MessageBoxButton.OKCancel,
             MessageBoxImage.Warning);
         if (answer != MessageBoxResult.OK)
             return;
         var source = Path.Combine(WatchfaceRoot, "send_face2.py");
+        ShowUploadNotice();
         if (!File.Exists(source))
         {
-            Log("Não achei o script de envio.");
+            Log("Upload script not found.", LogLevel.Error);
             return;
         }
-        await RunTool(Python(), $"\"{source}\" \"{_savedBin}\" {ReadId()}", "Envio");
+        await RunTool(Python(), $"\"{source}\" \"{_savedBin}\" {ReadId()}", "Upload");
     }
 
     async void RecoveryClick(object sender, RoutedEventArgs e)
     {
         var answer = MessageBox.Show(
-            "Isso é o reset de fábrica do Haylou Fun. Apaga as faces, o pareamento e as configurações do relógio. O Bluetooth do celular precisa estar desligado. Quando a escuta começar, reinicia o relógio.",
+            "This performs the Haylou Fun factory reset. It erases watchfaces, pairing and watch settings. Turn off Bluetooth on your phone. Restart the watch when scanning begins.",
             "Recovery",
             MessageBoxButton.OKCancel,
             MessageBoxImage.Warning);
@@ -1586,7 +1587,7 @@ public partial class MainWindow : Window
         var script = Path.Combine(WatchfaceRoot, "factory_reset.py");
         if (!File.Exists(script))
         {
-            Log("Não achei o script de recovery.");
+            Log("Recovery script not found.", LogLevel.Error);
             return;
         }
         await RunTool(Python(), $"\"{script}\"", "Recovery");
@@ -1640,10 +1641,10 @@ public partial class MainWindow : Window
         await File.WriteAllTextAsync(layout, JsonSerializer.Serialize(payload));
         var script = Path.Combine(WatchfaceRoot, "build_live.py");
         var args = $"\"{script}\" --png \"{_fittedPng}\" --layout \"{layout}\" --id {ReadId()} --name \"{NameBox.Text.Trim()}\" --title \"{TitleBox.Text.Trim()}\" -o \"{output}\"";
-        if (await RunTool(Python(), args, "Montagem"))
+        if (await RunTool(Python(), args, "Build"))
         {
             _savedBin = output;
-            Log("Bin pronto.");
+            Log("Binary ready.");
             return true;
         }
         return false;
@@ -1657,14 +1658,14 @@ public partial class MainWindow : Window
             var sources = new[] { "build_live.py", "module/clock.c", "module/imports.c" };
             if (sources.Any(source => File.GetLastWriteTimeUtc(Path.Combine(WatchfaceRoot, source)) > builtAt))
             {
-                Log("O gerador foi atualizado. Recriando o bin antes do envio.");
+                Log("The builder was updated. Rebuilding the binary before upload.");
                 return await RunBuild(_savedBin);
             }
             return true;
         }
         if (_fittedPng == null)
         {
-            Log("Importa um TBWF antes de enviar.");
+            Log("Import a TBWF before uploading.", LogLevel.Warning);
             return false;
         }
         var dialog = new Microsoft.Win32.SaveFileDialog
@@ -1701,32 +1702,27 @@ public partial class MainWindow : Window
                 EnableRaisingEvents = true,
             };
             process.OutputDataReceived += (_, args) => { if (args.Data != null) DispatchLog(args.Data); };
-            process.ErrorDataReceived += (_, args) => { if (args.Data != null) DispatchLog(args.Data); };
+            process.ErrorDataReceived += (_, args) => { if (args.Data != null) DispatchLog(args.Data, true); };
             process.Start();
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
             await process.WaitForExitAsync();
             if (process.ExitCode != 0)
             {
-                Log($"Falhou com código {process.ExitCode}.");
+                Log($"Process failed with exit code {process.ExitCode}.", LogLevel.Error);
                 return false;
             }
             return true;
         }
         catch (Exception ex)
         {
-            Log("erro: " + ex.Message);
+            Log("Error: " + ex.Message, LogLevel.Error);
             return false;
         }
         finally
         {
             SetBusy(false);
         }
-    }
-
-    void DispatchLog(string line)
-    {
-        Dispatcher.Invoke(() => Log(line));
     }
 
     void SetBusy(bool busy)
@@ -1751,12 +1747,6 @@ public partial class MainWindow : Window
     int ReadId()
     {
         return CustomDialId;
-    }
-
-    void Log(string line)
-    {
-        LogBox.AppendText(line + Environment.NewLine);
-        LogBox.ScrollToEnd();
     }
 
     static int Clamp(int value, int min, int max) => Math.Min(max, Math.Max(min, value));
@@ -1802,7 +1792,7 @@ public partial class MainWindow : Window
                 : 1;
             if (sections > 1)
             {
-                Log($"{property.Name} tem {sections} quadros. Essa faixa ainda não entra no bin.");
+                Log($"{property.Name} has {sections} frames. This strip is not supported in the binary yet.", LogLevel.Warning);
                 continue;
             }
             var resource = image.TryGetProperty("resource", out var resourceValue) ? resourceValue.GetString() : null;
@@ -1813,7 +1803,7 @@ public partial class MainWindow : Window
                 item.FullName.Replace('\\', '/').EndsWith(needle, StringComparison.OrdinalIgnoreCase));
             if (entry == null)
             {
-                Log($"Não achei a imagem {resource}.");
+                Log($"Image not found: {resource}.", LogLevel.Warning);
                 continue;
             }
             using var stream = entry.Open();
@@ -1878,7 +1868,7 @@ public partial class MainWindow : Window
                     _ => 180,
                 },
             });
-            Log($"Ponteiro {kind}, {scaled.PixelWidth}x{scaled.PixelHeight}.");
+            Log($"Clock hand {kind}, {scaled.PixelWidth}x{scaled.PixelHeight}.");
         }
     }
 
@@ -2039,7 +2029,7 @@ public sealed class HandItem
 
 public sealed class AnimationItem
 {
-    public string Label { get; set; } = "Animação";
+    public string Label { get; set; } = "Animation";
     public List<string> Frames { get; set; } = new();
     public List<BitmapSource> Previews { get; set; } = new();
     public List<FrameOffset> FrameOffsets { get; set; } = new();
@@ -2106,7 +2096,7 @@ public sealed class FrameOffset
 
 public sealed class SavedAnimation
 {
-    public string Label { get; set; } = "Animação";
+    public string Label { get; set; } = "Animation";
     public List<string> Frames { get; set; } = new();
     public List<FrameOffset> FrameOffsets { get; set; } = new();
     public int X { get; set; }

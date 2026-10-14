@@ -46,7 +46,7 @@ from rs4face import pack_dial, parse_dial, png_to_ezip  # noqa: E402
 def rgb565(value: str) -> int:
     text = value.removeprefix("#").removeprefix("0x")
     if len(text) != 6:
-        raise ValueError(f"cor invalida: {value}")
+        raise ValueError(f"Invalid color: {value}")
     red = int(text[0:2], 16)
     green = int(text[2:4], 16)
     blue = int(text[4:6], 16)
@@ -66,11 +66,11 @@ def truecolor_alpha(path: Path, width: int = 0, height: int = 0) -> tuple[bytes,
         width = width or max(1, int(image.width * height / image.height + 0.5))
         height = height or max(1, int(image.height * width / image.width + 0.5))
         if not (1 <= width <= 368 and 1 <= height <= 448):
-            raise ValueError("ponteiro precisa caber em 368x448")
+            raise ValueError("Clock hand must fit within 368x448")
         image = image.resize((width, height), Image.Resampling.LANCZOS)
     width, height = image.size
     if not (1 <= width <= 2047 and 1 <= height <= 2047):
-        raise ValueError(f"ponteiro grande demais: {width}x{height}")
+        raise ValueError(f"Clock hand is too large: {width}x{height}")
     raw = image.tobytes()
     pixels = bytearray()
     for offset in range(0, len(raw), 4):
@@ -81,7 +81,7 @@ def truecolor_alpha(path: Path, width: int = 0, height: int = 0) -> tuple[bytes,
         pixels.append(alpha)
     expected = width * height * 3
     if len(pixels) != expected:
-        raise RuntimeError(f"ponteiro {path.name} saiu com {len(pixels)} bytes")
+        raise RuntimeError(f"Clock hand {path.name} produced {len(pixels)} bytes")
     header = 5 | (width << 10) | (height << 21)
     return bytes(pixels), header
 
@@ -108,18 +108,18 @@ def glyph_request(item: dict) -> dict | None:
         return None
     if characters:
         if not isinstance(characters, dict) or any(len(ch) != 1 or ord(ch) > 127 for ch in characters):
-            raise ValueError("mapa de caracteres precisa usar chaves ASCII individuais")
+            raise ValueError("Character maps require individual ASCII keys")
         for ch, file in characters.items():
             if not Path(file).is_file():
-                raise ValueError(f"nao achei a imagem do caractere {ch!r}: {file}")
+                raise ValueError(f"Character image {ch!r} not found: {file}")
     elif not Path(font).is_file():
-        raise ValueError(f"nao achei a fonte {font}")
+        raise ValueError(f"Font not found: {font}")
     source = str(item.get("source", "text"))
     size = max(8, min(120, int(item.get("size", 24))))
     if source == "text":
         text = str(item.get("text") or " ")
         if len(text) > 12:
-            raise ValueError(f"texto longo demais para virar imagem: {text}")
+            raise ValueError(f"Text is too long to rasterize: {text}")
         alphabet = "".join(dict.fromkeys(text + " "))
         return {
             "font": font,
@@ -131,7 +131,7 @@ def glyph_request(item: dict) -> dict | None:
             "text": text,
         }
     if source not in DYNAMIC_GLYPHS:
-        raise ValueError(f"funcao desconhecida: {source}")
+        raise ValueError(f"Unknown data source: {source}")
     slots, alphabet = DYNAMIC_GLYPHS[source]
     return {
         "font": font,
@@ -180,13 +180,13 @@ def prepare_glyph_rasters(widgets: list, work: Path) -> tuple[list[tuple[str, Pa
         kind, asset, size, color = key
         ordered = "".join(sorted(chars, key=ord))
         if len(ordered) > 40:
-            raise ValueError("uma fonte pediu caracteres demais")
+            raise ValueError("Too many characters requested for one font")
         character_images = {}
         if kind == "images":
             originals = {ch: Image.open(file).convert("RGBA") for ch, file in asset}
             missing = set(ordered) - originals.keys() - {" ", "-"}
             if missing:
-                raise ValueError(f"imagens ausentes para os caracteres: {''.join(sorted(missing))}")
+                raise ValueError(f"Missing character images: {''.join(sorted(missing))}")
             largest = max(max(image.size) for image in originals.values())
             scale = size / largest
             character_images = {ch: image.resize(
@@ -241,7 +241,7 @@ def prepare_glyph_rasters(widgets: list, work: Path) -> tuple[list[tuple[str, Pa
         set_index = set_of[key]
         pitch = pitch_of[set_index] + int(item.get("spacing", 0) or 0)
         if not 1 <= pitch <= 368:
-            raise ValueError("espacamento dos caracteres deixa o passo fora de 1 a 368 pixels")
+            raise ValueError("Character spacing puts the advance outside the 1–368 pixel range")
         lines.append(
             {
                 "x": int(item["x"]),
@@ -259,7 +259,7 @@ def prepare_glyph_rasters(widgets: list, work: Path) -> tuple[list[tuple[str, Pa
         )
         slot += plan["slots"]
     if slot > 64:
-        raise ValueError("a face pediu casas demais para os numeros")
+        raise ValueError("The watchface needs too many numeric glyph slots")
     blank = fallback.get(0, "")
     tail = f"return &{blank};" if blank else "return 0;"
     info = {
@@ -277,7 +277,7 @@ def prepare_glyphs(widgets: list, work: Path) -> tuple[list[tuple[str, bytes, in
     for symbol, png in rasters:
         blob = png_to_ezip(png)
         if len(blob) < 8:
-            raise RuntimeError(f"ezip curto no caractere {symbol}")
+            raise RuntimeError(f"Incomplete eZip glyph: {symbol}")
         images.append((symbol, blob[4:], int.from_bytes(blob[:4], "little")))
     return images, info
 
@@ -285,16 +285,16 @@ def prepare_glyphs(widgets: list, work: Path) -> tuple[list[tuple[str, bytes, in
 def rgb565_bytes(color: str) -> tuple[int, int, int]:
     text = str(color).strip().lstrip("#")
     if len(text) != 6:
-        raise ValueError(f"cor invalida: {color}")
+        raise ValueError(f"Invalid color: {color}")
     return int(text[0:2], 16), int(text[2:4], 16), int(text[4:6], 16)
 
 
 def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, glyphs: dict | None = None, animations: list[dict] | None = None) -> None:
     labels = [item for item in widgets if not str(item.get("font") or "").strip() and not item.get("characters")]
     if not labels and not (glyphs or {}).get("lines") and not hands:
-        raise ValueError("a face precisa de um texto, uma fonte ou um ponteiro")
+        raise ValueError("The face requires text, raster glyphs or a clock hand")
     if len(labels) > 32:
-        raise ValueError("a face precisa ter no maximo 32 textos")
+        raise ValueError("The face supports at most 32 system labels")
     lines = [
         f'#define FACE "{c_string(face)}"',
         f'#define TITLE "{c_string(title)}"',
@@ -324,7 +324,7 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
     for item in labels:
         source = str(item.get("source", "text"))
         if source not in SOURCES:
-            raise ValueError(f"funcao desconhecida: {source}")
+            raise ValueError(f"Unknown data source: {source}")
         text = c_string(str(item.get("text", "")))
         lines.append(
             "    {%d, %d, 0x%04Xu, %d, %d, \"%s\"},"
@@ -447,10 +447,10 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
     for index, raw in enumerate(animations):
         source = str(raw.get("source", "loop"))
         if source not in ("static", "loop", "battery", "weekday", "day", "month", "second", "minute", "hour", "steps", "heart", "scaled"):
-            raise ValueError(f"animacao desconhecida: {source}")
+            raise ValueError(f"Unknown animation mode: {source}")
         frames = [Path(str(path)) for path in raw.get("frames", [])]
         if not 1 <= len(frames) <= 64:
-            raise ValueError("uma animacao precisa ter de 1 a 64 quadros")
+            raise ValueError("An animation must have 1–64 frames")
         raw_offsets = raw.get("offsets", [])
         offsets = []
         for frame_index in range(len(frames)):
@@ -469,7 +469,7 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
         symbols = []
         for frame_index, frame in enumerate(frames):
             if not frame.is_file():
-                raise ValueError(f"nao achei o quadro {frame}")
+                raise ValueError(f"Frame not found: {frame}")
             source_file = frame
             width = int(raw.get("width", 0) or 0)
             height = int(raw.get("height", 0) or 0)
@@ -480,12 +480,12 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
                 width = width or max(1, round(original.width * height / original.height))
                 height = height or max(1, round(original.height * width / original.width))
                 if not (1 <= width <= 368 and 1 <= height <= 448):
-                    raise ValueError("quadro de animacao precisa caber em 368x448")
+                    raise ValueError("Animation frames must fit within 368x448")
                 source_file = work / f"anim_{index}_{frame_index}.png"
                 original.resize((width, height), Image.Resampling.LANCZOS).save(source_file)
             blob = png_to_ezip(source_file)
             if len(blob) < 8:
-                raise RuntimeError(f"ezip curto no quadro {frame.name}")
+                raise RuntimeError(f"Incomplete eZip frame: {frame.name}")
             symbol = f"anim_{index}_{frame_index}"
             images.append((symbol, blob[4:], int.from_bytes(blob[:4], "little")))
             symbols.append(symbol)
@@ -550,12 +550,12 @@ def run(cmd: list[str]) -> None:
     result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         detail = (result.stdout + "\n" + result.stderr).strip()
-        raise RuntimeError(detail or f"comando falhou: {cmd[0]}")
+        raise RuntimeError(detail or f"Command failed: {cmd[0]}")
 
 
 def compile_so(work: Path, face: str) -> tuple[bytes, bytes]:
     if not GCC.is_file():
-        raise RuntimeError(f"falta o ARM GCC em {GCC}")
+        raise RuntimeError(f"ARM GCC not found at {GCC}")
     flags = [
         str(GCC),
         "-mcpu=cortex-m33",
@@ -605,17 +605,17 @@ def compile_so(work: Path, face: str) -> tuple[bytes, bytes]:
 def elf_sections(blob: bytes) -> list[tuple[int, int, int, int, int]]:
     """Return type, file offset, size, linked section and entry size (ELF32)."""
     if blob[:7] != b"\x7fELF\x01\x01\x01" or len(blob) < 52:
-        raise RuntimeError("modulo nao e ELF32 little-endian")
+        raise RuntimeError("The module is not little-endian ELF32")
     offset = int.from_bytes(blob[32:36], "little")
     stride, count = struct.unpack_from("<HH", blob, 46)
     if stride < 40 or offset + stride * count > len(blob):
-        raise RuntimeError("tabela de secoes ELF invalida")
+        raise RuntimeError("Invalid ELF section table")
     result = []
     for index in range(count):
         fields = struct.unpack_from("<10I", blob, offset + stride * index)
         kind, start, size, link, entry_size = fields[1], fields[4], fields[5], fields[6], fields[9]
         if kind != 8 and start + size > len(blob):
-            raise RuntimeError("secao ELF truncada")
+            raise RuntimeError("Truncated ELF section")
         result.append((kind, start, size, link, entry_size))
     return result
 
@@ -627,14 +627,14 @@ def elf_dynamic_symbols(blob: bytes) -> dict[str, int]:
         if kind != 11:  # SHT_DYNSYM
             continue
         if stride != 16 or size % stride or link >= len(sections):
-            raise RuntimeError("tabela de simbolos ELF invalida")
+            raise RuntimeError("Invalid ELF symbol table")
         _, names_start, names_size, _, _ = sections[link]
         names = blob[names_start : names_start + names_size]
         for offset in range(start, start + size, stride):
             name_offset, _, _, _, _, section = struct.unpack_from("<IIIBBH", blob, offset)
             end = names.find(b"\x00", name_offset)
             if end < 0:
-                raise RuntimeError("nome de simbolo ELF invalido")
+                raise RuntimeError("Invalid ELF symbol name")
             name = names[name_offset:end].decode("ascii")
             if name:
                 symbols[name] = section
@@ -672,28 +672,28 @@ def assert_module_resources(code: bytes, resource: bytes, image_names: list[str]
     imports = elf_dynamic_symbols(code)
     for name in ["lv_i18n_lang_pack", *image_names]:
         if not exports.get(name):
-            raise RuntimeError(f"recurso obrigatorio ausente no res.so: {name}")
+            raise RuntimeError(f"Required resource missing from res.so: {name}")
         if name not in imports:
-            raise RuntimeError(f"modulo nao referencia o recurso: {name}")
+            raise RuntimeError(f"Module does not reference resource: {name}")
     for blob in (code, resource):
         for kind, start, size, _, stride in elf_sections(blob):
             if kind != 9:  # SHT_REL
                 continue
             if stride != 8 or size % stride:
-                raise RuntimeError("tabela de relocacoes ELF invalida")
+                raise RuntimeError("Invalid ELF relocation table")
             for offset in range(start, start + size, stride):
                 relocation = struct.unpack_from("<I", blob, offset + 4)[0] & 0xFF
                 if relocation not in (2, 21, 23):  # ABS32, GLOB_DAT, RELATIVE
-                    raise RuntimeError(f"relocacao incompativel com LS11: {relocation}")
+                    raise RuntimeError(f"Relocation unsupported by LS11: {relocation}")
 
 
 def validate_upload(blob: bytes, ident: int) -> None:
     """Check the actual saved package before starting a Bluetooth transfer."""
     package = parse_dial(blob)
     if package["id"] != ident:
-        raise RuntimeError(f"id do pacote {package['id']} difere do envio {ident}")
+        raise RuntimeError(f"Package ID {package['id']} differs from upload ID {ident}")
     if not package["entry_crc_ok"] or any(not item["crc_ok"] for item in package["files"]):
-        raise RuntimeError("pacote com CRC invalido")
+        raise RuntimeError("Package CRC is invalid")
     resources = {item["path"]: item["data"] for item in package["files"]}
     for path, code in resources.items():
         if not path.endswith(".so") or path.endswith("_res.so"):
@@ -705,15 +705,15 @@ def validate_upload(blob: bytes, ident: int) -> None:
             continue
         resource = resources.get(path[:-3] + "_res.so")
         if resource is None:
-            raise RuntimeError("modulo de recursos ausente no pacote")
+            raise RuntimeError("Resource module missing from package")
         image_names = [name for name in imports if name == "vscode_bg"
                        or name.endswith("_hand") or name.startswith("anim_")
                        or (name.startswith("g") and name[1:2].isdigit() and "c" in name)]
         assert_module_resources(code, resource, image_names)
         if "vscode_bg" in imports and elf_exported_u32(code, "haylou_editor_abi_version") != 2:
             raise RuntimeError(
-                "Bin de uma versao do editor com buffers de dados insuficientes, "
-                "associada ao crash do relogio. Gere o bin novamente com o editor atualizado."
+                "Binary from an editor version with insufficient data buffers, "
+                "associated with a watch crash. Rebuild the binary with the updated editor."
             )
 
 
@@ -723,10 +723,10 @@ def retarget_live_package(blob: bytes, ident: int) -> bytes:
     previous = package["id"]
     validate_upload(blob, previous)
     if not 1 <= ident <= 65534:
-        raise ValueError("id precisa ficar entre 1 e 65534")
+        raise ValueError("ID must be between 1 and 65534")
     old, new = f"dial_{previous}".encode("ascii"), f"dial_{ident}".encode("ascii")
     if len(old) != len(new):
-        raise ValueError("a troca de slot precisa preservar o tamanho do nome ELF")
+        raise ValueError("Slot retargeting must preserve the ELF name length")
     files = []
     found_identity = False
     for item in package["files"]:
@@ -757,7 +757,7 @@ def retarget_live_package(blob: bytes, ident: int) -> bytes:
         path = item["path"].replace(old.decode("ascii"), new.decode("ascii"))
         files.append((path, data))
     if not found_identity:
-        raise RuntimeError("nao achei a identidade registrada no modulo; troca de slot cancelada")
+        raise RuntimeError("Registered module identity not found; slot change cancelled")
     result = pack_dial(files, ident, package["name"], package["version"])
     validate_upload(result, ident)
     return result
@@ -766,13 +766,13 @@ def retarget_live_package(blob: bytes, ident: int) -> bytes:
 def assert_rom_images(blob: bytes, expected: int) -> None:
     """Pixels left in ordinary rodata fault the watch on the first draw."""
     if blob[:4] != b"\x7fELF" or len(blob) < 52:
-        raise RuntimeError("res.so nao e um elf")
+        raise RuntimeError("res.so is not an ELF file")
     section_off = int.from_bytes(blob[32:36], "little")
     entry_size = int.from_bytes(blob[46:48], "little")
     count = int.from_bytes(blob[48:50], "little")
     name_index = int.from_bytes(blob[50:52], "little")
     if entry_size < 40 or section_off + count * entry_size > len(blob):
-        raise RuntimeError("elf de recurso com tabela invalida")
+        raise RuntimeError("Resource ELF has an invalid section table")
 
     def header(index: int) -> bytes:
         start = section_off + index * entry_size
@@ -796,20 +796,20 @@ def assert_rom_images(blob: bytes, expected: int) -> None:
             rodata = size
     if rom != expected:
         raise RuntimeError(
-            f"secao ROM3_IMG esperava {expected} imagens e achou {rom}"
+            f"ROM3_IMG expected {expected} images but found {rom}"
         )
     if rodata > 64:
         raise RuntimeError(
-            f"pixels foram parar no rodata ({rodata} bytes) e isso derruba o relogio"
+            f"Pixels ended up in rodata ({rodata} bytes), which crashes the watch"
         )
 
 
 def build(png: Path, layout_path: Path, ident: int, name: str, title: str, dest: Path) -> None:
     if not 1 <= ident <= 65534:
-        raise ValueError("id precisa ficar entre 1 e 65534")
+        raise ValueError("ID must be between 1 and 65534")
     raw_name = name.encode("utf-8")
     if not raw_name or len(raw_name) > 15:
-        raise ValueError("nome do pacote precisa ter de 1 a 15 bytes")
+        raise ValueError("Package name must contain 1–15 bytes")
     layout = json.loads(layout_path.read_text(encoding="utf-8"))
     widgets = list(layout["widgets"])
     hands = list(layout.get("hands") or [])
@@ -819,7 +819,7 @@ def build(png: Path, layout_path: Path, ident: int, name: str, title: str, dest:
 
     image = Image.open(png).convert("RGBA")
     if image.size != (368, 448):
-        raise ValueError("o fundo precisa ter 368x448")
+        raise ValueError("The background must be 368x448")
     thumb = image.resize((260, 317), Image.Resampling.LANCZOS)
     with tempfile.TemporaryDirectory(prefix="rs4live-") as folder:
         work = Path(folder)
@@ -828,13 +828,13 @@ def build(png: Path, layout_path: Path, ident: int, name: str, title: str, dest:
         background = png_to_ezip(work / "bg.png")
         thumbnail = png_to_ezip(work / "tn.png")
         if len(background) < 8:
-            raise RuntimeError("ezip devolveu um fundo curto")
+            raise RuntimeError("eZip produced an incomplete background")
         header = int.from_bytes(background[:4], "little")
         images = [("vscode_bg", background[4:], header)]
         for hand in hands:
             kind = str(hand.get("kind", ""))
             if kind not in ("hour", "minute", "second"):
-                raise ValueError(f"ponteiro desconhecido: {kind}")
+                raise ValueError(f"Unknown clock hand: {kind}")
             pixels, header = truecolor_alpha(Path(hand["file"]), int(hand.get("width", 0)), int(hand.get("height", 0)))
             images.append((f"{kind}_hand", pixels, header))
         glyph_images, glyph_info = prepare_glyphs(widgets, work)
@@ -844,11 +844,11 @@ def build(png: Path, layout_path: Path, ident: int, name: str, title: str, dest:
         write_layout(work / "face_layout.h", face, title or name, widgets, hands, glyph_info, animation_info)
         write_res(work / "res.c", images)
         if hands:
-            print(f"ponteiros {len(hands)}")
+            print(f"Clock hands: {len(hands)}")
         if glyph_images:
-            print(f"fonte desenhada em {len(glyph_images)} imagens")
+            print(f"Font rasterized into {len(glyph_images)} images")
         if animation_images:
-            print(f"animacoes desenhadas em {len(animation_images)} imagens")
+            print(f"Animations rasterized into {len(animation_images)} images")
         code, resource = compile_so(work, face)
     assert_rom_images(resource, len(images))
     assert_module_resources(code, resource, [symbol for symbol, _, _ in images])
@@ -865,22 +865,22 @@ def build(png: Path, layout_path: Path, ident: int, name: str, title: str, dest:
     )
     checked = parse_dial(blob)
     if checked["id"] != ident or not checked["entry_crc_ok"]:
-        raise RuntimeError("pacote gerado nao passou na checagem")
+        raise RuntimeError("The generated package failed validation")
     if any(not item["crc_ok"] for item in checked["files"]):
-        raise RuntimeError("crc de um arquivo interno falhou")
+        raise RuntimeError("An internal file CRC failed")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(blob)
-    print(f"escrito {dest} ({len(blob)} bytes) id {ident}")
+    print(f"Written {dest} ({len(blob)} bytes), ID {ident}")
     if any(item.get("characters") for item in widgets):
-        print("numeros importados de imagens de caracteres")
+        print("Numbers imported from PNG character images")
     elif any(str(item.get("font") or "").strip() for item in widgets):
-        print("texto com fonte virou imagem")
+        print("Font text exported as image glyphs")
     else:
-        print("fonte do relogio fixada em 1")
+        print("System font fixed at size 1")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Montar uma face viva do RS4 Plus")
+    parser = argparse.ArgumentParser(description="Build a live RS4 Plus watchface")
     parser.add_argument("--png", type=Path, required=True)
     parser.add_argument("--layout", type=Path, required=True)
     parser.add_argument("--id", type=int, required=True)
@@ -895,5 +895,5 @@ if __name__ == "__main__":
     try:
         main()
     except (ValueError, RuntimeError, OSError) as exc:
-        print(f"erro: {exc}", file=sys.stderr)
+        print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
