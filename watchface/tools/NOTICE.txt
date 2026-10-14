@@ -1,0 +1,4 @@
+ezip.exe comes from the SiFli SDK, path tools/png2ezip/ezip.exe.
+Source: https://github.com/OpenSiFli/SiFli-SDK
+License: Apache License 2.0, https://www.apache.org/licenses/LICENSE-2.0
+The binary is used unchanged to convert PNG images to the SiFli eZip format.
