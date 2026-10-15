@@ -220,6 +220,8 @@
                             <TextBlock Text="Text font" Foreground="{StaticResource Muted}" FontSize="11"/>
                             <ComboBox x:Name="FontChoiceBox" Margin="0,3,0,7" SelectionChanged="FontChoiceChanged"/>
                             <Button x:Name="LoadFontButton" Content="Load font (.ttf / .otf)" Margin="0,0,0,10" Click="LoadFontClick"/>
+                            <Button x:Name="LoadPngFontButton" Content="Load PNG font..." Margin="0,0,0,10" Click="LoadPngFontClick" ToolTip="Choose PNG character images to create a font, or open a saved .hfont.json font."/>
+                            <Button x:Name="EditPngFontButton" Content="Edit PNG font..." Margin="0,0,0,10" Click="EditPngFontClick" ToolTip="Add characters, replace images or change the mapping of this PNG font. Updates all text elements using it."/>
                             <UniformGrid Columns="2">
                                 <StackPanel Margin="0,0,5,0">
                                     <TextBlock Text="Size" Foreground="{StaticResource Muted}" FontSize="11"/>

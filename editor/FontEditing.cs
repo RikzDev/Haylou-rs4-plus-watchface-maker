@@ -74,9 +74,11 @@ public partial class MainWindow
     {
         FontChoiceBox.IsEnabled = _selected != null;
         LoadFontButton.IsEnabled = _selected != null;
+        LoadPngFontButton.IsEnabled = _selected != null;
         FontChoiceBox.SelectedItem = _selected == null ? null : _availableFonts.FirstOrDefault(font =>
             _selected.CharacterImages.Count > 0 ? SameCharacters(font.Characters, _selected.CharacterImages)
                 : string.Equals(font.File, _selected.FontFile ?? DefaultFontPath, StringComparison.OrdinalIgnoreCase));
+        EditPngFontButton.IsEnabled = !_layerBusy && _selected?.CharacterImages.Count > 0;
     }
 
     void ApplyFont(Widget widget, FontAsset font)

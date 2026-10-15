@@ -996,7 +996,7 @@ public partial class MainWindow : Window
         return result;
     }
 
-    static string? CharacterForFile(string name)
+    internal static string? CharacterForFile(string name)
     {
         var stem = Path.GetFileNameWithoutExtension(name).TrimStart('_').ToLowerInvariant();
         if (stem.Length == 1 && stem[0] < 128)
@@ -1360,6 +1360,12 @@ public partial class MainWindow : Window
         ResetFonts();
         foreach (var saved in project.Fonts)
         {
+            if (saved.Characters.Count > 0)
+            {
+                RegisterPngFont(saved.Characters.ToDictionary(pair => pair.Key,
+                    pair => Path.Combine(Path.GetDirectoryName(path)!, pair.Value)), saved.Label, false);
+                continue;
+            }
             var file = Path.Combine(Path.GetDirectoryName(path)!, saved.File);
             if (File.Exists(file)) RegisterFont(file, saved.Label);
         }
@@ -1391,6 +1397,7 @@ public partial class MainWindow : Window
                 widget.CharacterImages.Add(pair.Key, characterPath);
                 widget.CharacterPreviews.Add(pair.Key, LoadBitmap(characterPath));
             }
+            if (widget.CharacterImages.Count > 0) widget.FontFile = null;
             _widgets.Add(widget);
         }
         _selected = _widgets.FirstOrDefault();
@@ -1494,10 +1501,33 @@ public partial class MainWindow : Window
             savedFontPaths[font.File!] = relative;
             savedFonts.Add(new SavedFont { Label = font.Label, File = relative });
         }
+        var savedImageFonts = new List<(FontAsset Font, Dictionary<string, string> Characters)>();
+        var fontImages = _availableFonts.SelectMany(font => font.Characters.Values).Select(Path.GetFullPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToDictionary(file => file, File.ReadAllBytes, StringComparer.OrdinalIgnoreCase);
+        foreach (var font in _availableFonts.Where(font => font.Characters.Count > 0))
+        {
+            var imageFolder = Path.Combine(fontFolder, $"png-{savedImageFonts.Count:D2}");
+            Directory.CreateDirectory(imageFolder);
+            var characters = new Dictionary<string, string>();
+            foreach (var pair in font.Characters)
+            {
+                var destination = Path.Combine(imageFolder, $"c{(int)pair.Key[0]:D3}.png");
+                File.WriteAllBytes(destination, fontImages[Path.GetFullPath(pair.Value)]);
+                characters[pair.Key] = Path.GetRelativePath(folder, destination);
+            }
+            savedImageFonts.Add((font, characters));
+            savedFonts.Add(new SavedFont { Label = font.Label, Characters = characters });
+        }
         var characterFolder = Path.Combine(folder, Path.GetFileNameWithoutExtension(path) + "-characters");
         var savedCharacters = new List<Dictionary<string, string>>();
         for (var index = 0; index < _widgets.Count; index++)
         {
+            var catalog = savedImageFonts.FirstOrDefault(font => SameCharacters(font.Font.Characters, _widgets[index].CharacterImages));
+            if (catalog.Characters != null)
+            {
+                savedCharacters.Add(new(catalog.Characters));
+                continue;
+            }
             var characters = new Dictionary<string, string>();
             foreach (var pair in _widgets[index].CharacterImages)
             {
@@ -1803,6 +1833,9 @@ public partial class MainWindow : Window
         ImportButton.IsEnabled = !busy;
         IconLibraryButton.IsEnabled = !busy;
         AddLibraryFramesButton.IsEnabled = !busy;
+        LoadFontButton.IsEnabled = !busy && _selected != null;
+        LoadPngFontButton.IsEnabled = !busy && _selected != null;
+        EditPngFontButton.IsEnabled = !busy && _selected?.CharacterImages.Count > 0;
         OpenButton.IsEnabled = !busy;
         SaveProjectButton.IsEnabled = !busy;
         SaveBinButton.IsEnabled = !busy;
@@ -2055,6 +2088,7 @@ public sealed class ProjectFile
 
 public sealed class SavedFont
 {
+    public Dictionary<string, string> Characters { get; set; } = new();
     public string Label { get; set; } = "";
     public string File { get; set; } = "";
 }
