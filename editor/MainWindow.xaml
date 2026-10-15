@@ -26,6 +26,7 @@
                        Text="Click to select. Drag to move and use the handles to resize. Shift keeps proportions; Esc cancels."/>
             <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
                 <Button x:Name="ImportButton" Content="Import TBWF" Margin="0,0,0,8" Click="ImportClick"/>
+                <Button Content="Load TBWF icon library (APK)" Margin="0,0,0,8" Click="LoadIconLibraryClick" ToolTip="Read built-in icons from your Hello Haylou APK, then import the TBWF again."/>
                 <Button x:Name="OpenButton" Content="Open project" Margin="0,0,0,8" Click="OpenClick"/>
                 <Button x:Name="SaveProjectButton" Content="Save project" Margin="0,0,0,8" Click="SaveProjectClick"/>
                 <Button x:Name="SaveBinButton" Content="Generate .bin" Margin="0,0,0,8" Click="SaveBinClick"/>

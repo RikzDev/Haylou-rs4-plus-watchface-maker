@@ -1008,7 +1008,27 @@ public partial class MainWindow : Window
 
     HashSet<string> ImportAnimations(ZipArchive zip, JsonElement elements)
     {
+        // Claim references even for invisible elements so the loose-image fallback
+        // cannot accidentally display an intentionally hidden icon or sequence.
         var claimedImages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var property in elements.EnumerateObject())
+        {
+            if (property.Value.ValueKind != JsonValueKind.Object) continue;
+            foreach (var kind in new[] { "resourceImage", "resourceIcon" })
+            {
+                if (!property.Value.TryGetProperty(kind, out var reference) || reference.ValueKind != JsonValueKind.Object
+                    || !reference.TryGetProperty("resource", out var path) || path.ValueKind != JsonValueKind.String) continue;
+                var normalizedPath = (path.GetString() ?? "").Replace('\\', '/').TrimStart('/');
+                if (normalizedPath.Length == 0) continue;
+                foreach (var entry in zip.Entries)
+                {
+                    var entryPath = entry.FullName.Replace('\\', '/').TrimStart('/');
+                    if (normalizedPath.EndsWith('/') ? entryPath.StartsWith(normalizedPath, StringComparison.OrdinalIgnoreCase)
+                        : entryPath.EndsWith(normalizedPath, StringComparison.OrdinalIgnoreCase))
+                        claimedImages.Add(entryPath);
+                }
+            }
+        }
         foreach (var property in elements.EnumerateObject())
         {
             var element = property.Value;
@@ -1017,10 +1037,16 @@ public partial class MainWindow : Window
             if (element.TryGetProperty("visible", out var visible) && visible.ValueKind == JsonValueKind.False)
                 continue;
             JsonElement resource = default;
-            if (element.TryGetProperty("resourceImage", out var image) && image.ValueKind == JsonValueKind.Object)
+            var isIcon = false;
+            if (element.TryGetProperty("resourceImage", out var image) && image.ValueKind == JsonValueKind.Object
+                && image.TryGetProperty("resource", out var imagePath) && imagePath.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(imagePath.GetString()))
                 resource = image;
             else if (element.TryGetProperty("resourceIcon", out var icon) && icon.ValueKind == JsonValueKind.Object)
+            {
                 resource = icon;
+                isIcon = true;
+            }
             else
                 continue;
             var sections = resource.TryGetProperty("sections", out var sectionValue) && sectionValue.ValueKind == JsonValueKind.Number
@@ -1035,14 +1061,22 @@ public partial class MainWindow : Window
                     && entry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)).ToList()
                 : zip.Entries.Where(entry => entry.FullName.Replace('\\', '/').TrimStart('/').EndsWith(normalized, StringComparison.OrdinalIgnoreCase)).ToList();
             entries = OrderAnimationEntries(property.Name, entries);
-            if (entries.Count == 0)
-            {
-                Log($"Animation {property.Name} uses {resourcePath}, but its frames are missing from the TBWF.", LogLevel.Warning);
-                continue;
-            }
             foreach (var entry in entries)
                 claimedImages.Add(entry.FullName.Replace('\\', '/').TrimStart('/'));
             var rawFrames = new List<BitmapSource>();
+            var size = Math.Max(1.0 / ScreenWidth, Fraction(resource, "size", 0.2));
+            var target = Math.Max(1, (int)Math.Round(size * ScreenWidth));
+            if (entries.Count == 0 && isIcon)
+            {
+                try { rawFrames = BuiltinIconFrames(resourcePath, element, target); }
+                catch (Exception error)
+                {
+                    Log($"Cannot render icon {property.Name}: {error.Message}", LogLevel.Warning);
+                    continue;
+                }
+                if (rawFrames.Count > 0)
+                    Log($"Resolved {property.Name} from the Hello Haylou icon library ({rawFrames.Count} frames).");
+            }
             foreach (var entry in entries)
             {
                 var bitmap = ReadZipBitmap(entry);
@@ -1052,9 +1086,12 @@ public partial class MainWindow : Window
                     rawFrames.Add(bitmap);
             }
             if (rawFrames.Count < 1)
+            {
+                Log(isIcon
+                    ? $"Icon {property.Name} references {resourcePath}, which is not embedded. Load the Hello Haylou APK with 'Load TBWF icon library (APK)' and import again."
+                    : $"Image {property.Name} uses {resourcePath}, but its frames are missing from the TBWF.", LogLevel.Warning);
                 continue;
-            var size = Math.Max(0.05, Fraction(resource, "size", 0.2));
-            var target = Math.Max(1, (int)Math.Round(size * ScreenWidth));
+            }
             var frames = new List<string>();
             var previews = new List<BitmapSource>();
             for (var index = 0; index < rawFrames.Count; index++)
@@ -1081,12 +1118,15 @@ public partial class MainWindow : Window
                 Interval = 400,
                 Source = property.Name switch
                 {
-                    "battery" => "battery",
-                    "dayOfWeek" => "weekday",
+                    "battery" or "batteryResource" => "battery",
+                    "dayOfWeek" or "dayOfWeekResource" => "weekday",
+                    "weatherResource" or "connectionResource" => "static",
                     _ when frames.Count == 1 => "static",
                     _ => "loop",
                 },
             });
+            if (frames.Count > 1 && property.Name is "weatherResource" or "connectionResource")
+                Log($"{property.Name}: all icon frames were imported as a fixed image. Automatic weather/connection state selection is not supported yet; inspect or reorder frames in the sequence editor.", LogLevel.Warning);
             Log($"Animation {property.Name}: {frames.Count} frames.");
         }
         return claimedImages;
@@ -1095,7 +1135,7 @@ public partial class MainWindow : Window
     void ImportUnreferencedFixedImages(ZipArchive zip, HashSet<string> claimedImages)
     {
         var images = zip.Entries
-            .Where(entry => entry.FullName.StartsWith("resourceImage/", StringComparison.OrdinalIgnoreCase)
+            .Where(entry => entry.FullName.Replace('\\', '/').TrimStart('/').StartsWith("resourceImage/", StringComparison.OrdinalIgnoreCase)
                 && entry.FullName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
                 && !claimedImages.Contains(entry.FullName.Replace('\\', '/').TrimStart('/'))
                 && !entry.Name.Equals("dial.png", StringComparison.OrdinalIgnoreCase)

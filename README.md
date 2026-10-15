@@ -214,6 +214,16 @@ The battery source displays the number only: add a separate fixed `%` text if de
 
 Add or select a fixed image to move and resize it independently. It uses the same positioning controls as a sequence, with its mode set to **Fixed image**. The dial background remains the fitted background layer.
 
+### Built-in TBWF icons
+
+Some TBWF files refer to Hello Haylou icons by name (for example `stepResource_ic_wf_step_shoe_print.png`) without storing the image inside the archive. Their website preview can show a heart, shoe or weather icon even though the TBWF contains no matching PNG.
+
+The editor resolves these references from **your own Hello Haylou APK**. Place `Hello+Haylou.apk` in the project root, set `HAYLOU_HELLO_APK` to its full path, or click **Load TBWF icon library (APK)** and select the APK. Then import the TBWF again. The library is cached under `%LOCALAPPDATA%\HaylouFaceEditor\tbwf-icons`; the app does not need to be installed on Windows. No APK or original app artwork is distributed in this repository.
+
+Vector icons and animation lists are converted into editable PNG frames with the imported position, size and solid color. Transparent fills, strokes and trimmed progress paths are supported. Invisible resources remain hidden, and embedded images take priority over library resources. Unsupported drawable types produce a warning instead of silently disappearing; Android layer-list effects are currently unsupported.
+
+Battery resources use battery-driven selection. Weather and Bluetooth connection icon sets are imported with all their frames in **Fixed image** mode: automatic weather-condition and connection-state selection is not implemented yet. Use **Single frame** to inspect them or reorder the desired image to the first position for a fixed display. Imported PNGs are saved with the project, so reopening it and generating a `.bin` no longer require the APK.
+
 ### Frame sequences
 
 Select a sequence to add, remove or reorder its frames. Choose a preview mode:
