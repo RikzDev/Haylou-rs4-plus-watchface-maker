@@ -44,7 +44,7 @@ public partial class MainWindow : Window
         ResetFonts();
         NameBox.TextChanged += (_, _) => _savedBin = null;
         TitleBox.TextChanged += (_, _) => _savedBin = null;
-        LoadDefaults();
+        InitializeBlankProject();
         RefreshFontChoices();
         InitializeGlyphPreview();
         FillAnimationSources();
@@ -53,21 +53,22 @@ public partial class MainWindow : Window
         _previewTimer.Tick += (_, _) => PreviewAnimations();
         _previewTimer.Start();
         Redraw();
+        RefreshAnimations(null);
+        ShowSelection();
     }
 
-    void LoadDefaults()
+    void InitializeBlankProject()
     {
         _widgets.Clear();
-        Add("hour", "Hour", 285, 185, "#CE8349", "12", 29, "hour");
-        Add("colon", "Colon", 304, 183, "#CE8349", ":", 29, "text");
-        Add("minute", "Minute", 322, 185, "#CE8349", "34", 29, "minute");
-        Add("month", "Month", 285, 214, "#CE8349", "10", 24, "month");
-        Add("slash", "Slash", 305, 212, "#CE8349", "/", 24, "text");
-        Add("day", "Day", 322, 214, "#CE8349", "12", 24, "day");
-        Add("heart", "Heart rate", 259, 270, "#B0C8A3", "72", 22, "heart");
-        Add("steps", "Steps", 259, 299, "#B0C8A3", "1234", 22, "steps");
-        Add("battery", "Battery", 259, 325, "#B0C8A3", "15", 22, "battery");
+        EnsureBackground();
         FillFunctions();
+    }
+
+    void EnsureBackground()
+    {
+        if (_fittedPng != null && File.Exists(_fittedPng))
+            return;
+        RenderBackground();
     }
 
     void FillFunctions()
@@ -408,13 +409,17 @@ public partial class MainWindow : Window
 
     void RemoveClick(object sender, RoutedEventArgs e)
     {
-        if (_selected == null || _widgets.Count <= 1)
+        if (_selected == null)
             return;
         _widgets.Remove(_selected);
         _savedBin = null;
-        _selected = _widgets[0];
+        _canvasTarget = null;
+        _selected = _widgets.FirstOrDefault();
         Redraw();
-        Select(_selected);
+        if (_selected != null)
+            Select(_selected);
+        else
+            ShowSelection();
     }
 
     void AddAnimationClick(object sender, RoutedEventArgs e)
@@ -845,6 +850,11 @@ public partial class MainWindow : Window
         _animations.Clear();
         if (hasElements)
             ImportElements(zip, elements);
+        else
+        {
+            _widgets.Clear();
+            _selected = null;
+        }
         using var pngStream = pngEntry.Open();
         using var pngMemory = new MemoryStream();
         pngStream.CopyTo(pngMemory);
@@ -854,10 +864,8 @@ public partial class MainWindow : Window
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
         bitmap.StreamSource = pngMemory;
         bitmap.EndInit();
-        var fitted = FitCover(bitmap);
-        BackgroundImage.Source = fitted;
-        _fittedPng = Path.Combine(_workingFolder, "background.png");
-        SavePng(fitted, _fittedPng);
+        _backgroundColor = "#000000";
+        SetBackgroundImage(bitmap, Path.GetFileName(path));
         _hands.Clear();
         if (hasElements)
         {
@@ -865,8 +873,6 @@ public partial class MainWindow : Window
             var claimedImages = ImportAnimations(zip, elements);
             ImportUnreferencedFixedImages(zip, claimedImages);
         }
-        if (_widgets.Count == 0)
-            Add("day", "Day", 160, 300, "#FFFFFF", "12", 24, "day");
         var ratio = bitmap.PixelWidth / (double)bitmap.PixelHeight;
         if (Math.Abs(ratio - (ScreenWidth / (double)ScreenHeight)) > 0.02)
             Log($"This design is {bitmap.PixelWidth}x{bitmap.PixelHeight}, with a different aspect ratio. Fitting it to 368x448.", LogLevel.Warning);
@@ -878,6 +884,8 @@ public partial class MainWindow : Window
         Redraw();
         if (_selected != null)
             Select(_selected);
+        else
+            ShowSelection();
     }
 
     void ImportElements(ZipArchive zip, JsonElement elements)
@@ -1402,17 +1410,8 @@ public partial class MainWindow : Window
                 PosX = saved.PosX, PosY = saved.PosY, PreviewDegrees = saved.PreviewDegrees,
             });
         }
-        var png = Path.Combine(Path.GetDirectoryName(path)!, project.Background);
-        if (File.Exists(png))
-        {
-            var bitmap = new BitmapImage();
-            bitmap.BeginInit();
-            bitmap.CacheOption = BitmapCacheOption.OnLoad;
-            bitmap.UriSource = new Uri(png);
-            bitmap.EndInit();
-            BackgroundImage.Source = bitmap;
-            _fittedPng = png;
-        }
+        _canvasTarget = null;
+        LoadBackgroundSettings(project, path);
         _animations.Clear();
         foreach (var saved in project.Animations)
         {
@@ -1454,11 +1453,6 @@ public partial class MainWindow : Window
 
     void SaveProjectClick(object sender, RoutedEventArgs e)
     {
-        if (_fittedPng == null)
-        {
-            Log("Import a TBWF before saving the project.", LogLevel.Warning);
-            return;
-        }
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Filter = "Project (*.hface.json)|*.hface.json",
@@ -1471,6 +1465,7 @@ public partial class MainWindow : Window
 
     void SaveProject(string path)
     {
+        EnsureBackground();
         var folder = Path.GetDirectoryName(path)!;
         var pngName = Path.GetFileNameWithoutExtension(path) + ".png";
         var backgroundDest = Path.Combine(folder, pngName);
@@ -1585,6 +1580,7 @@ public partial class MainWindow : Window
             Name = NameBox.Text.Trim(),
             Title = TitleBox.Text.Trim(),
             Background = pngName,
+            BackgroundEdit = SaveBackgroundSettings(path),
             Animations = savedAnimations,
             Hands = savedHands,
             Fonts = savedFonts,
@@ -1610,11 +1606,6 @@ public partial class MainWindow : Window
 
     async void SaveBinClick(object sender, RoutedEventArgs e)
     {
-        if (_fittedPng == null)
-        {
-            Log("Import a TBWF before generating the binary.", LogLevel.Warning);
-            return;
-        }
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Filter = "Watchface (*.bin)|*.bin",
@@ -1668,6 +1659,7 @@ public partial class MainWindow : Window
 
     async Task<bool> RunBuild(string output)
     {
+        EnsureBackground();
         var layout = Path.Combine(_workingFolder, "layout.json");
         var payload = new
         {
@@ -1736,11 +1728,6 @@ public partial class MainWindow : Window
             }
             return true;
         }
-        if (_fittedPng == null)
-        {
-            Log("Import a TBWF before uploading.", LogLevel.Warning);
-            return false;
-        }
         var dialog = new Microsoft.Win32.SaveFileDialog
         {
             Filter = "Watchface (*.bin)|*.bin",
@@ -1800,6 +1787,7 @@ public partial class MainWindow : Window
 
     void SetBusy(bool busy)
     {
+        BackgroundEditorPanel.IsEnabled = !busy;
         ImportButton.IsEnabled = !busy;
         IconLibraryButton.IsEnabled = !busy;
         AddLibraryFramesButton.IsEnabled = !busy;
@@ -2045,6 +2033,7 @@ public sealed class ProjectFile
     public string Name { get; set; } = "";
     public string Title { get; set; } = "";
     public string Background { get; set; } = "";
+    public SavedBackground? BackgroundEdit { get; set; }
     public List<SavedWidget> Widgets { get; set; } = new();
     public List<SavedAnimation> Animations { get; set; } = new();
     public List<SavedHand> Hands { get; set; } = new();

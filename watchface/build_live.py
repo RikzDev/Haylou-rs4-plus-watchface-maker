@@ -291,8 +291,6 @@ def rgb565_bytes(color: str) -> tuple[int, int, int]:
 
 def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, glyphs: dict | None = None, animations: list[dict] | None = None) -> None:
     labels = [item for item in widgets if not str(item.get("font") or "").strip() and not item.get("characters")]
-    if not labels and not (glyphs or {}).get("lines") and not hands:
-        raise ValueError("The face requires text, raster glyphs or a clock hand")
     if len(labels) > 32:
         raise ValueError("The face supports at most 32 system labels")
     lines = [

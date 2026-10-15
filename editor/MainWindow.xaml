@@ -36,13 +36,44 @@
                            Text="Fonts and PNG characters are exported as images to preserve size and position."/>
             </StackPanel>
             <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                <StackPanel x:Name="BackgroundEditorPanel">
+                    <TextBlock Text="Background" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="BackgroundFileInfo" Text="Solid color · 368 × 448" TextTrimming="CharacterEllipsis" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,0,0,8"/>
+                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                        <Button Content="Change image..." Click="ChooseBackgroundClick" Margin="0,0,4,0"/>
+                        <Button x:Name="RemoveBackgroundButton" Content="Remove image" Click="RemoveBackgroundClick" Margin="4,0,0,0"/>
+                    </UniformGrid>
+                    <TextBlock Text="Fill color"/>
+                    <DockPanel Margin="0,4,0,8">
+                        <Button DockPanel.Dock="Right" Tag="#FFFFFF" Background="White" Width="28" Margin="6,0,0,0" Click="BackgroundColorSwatchClick" ToolTip="White"/>
+                        <Button DockPanel.Dock="Right" Tag="#000000" Background="Black" Width="28" Margin="6,0,0,0" Click="BackgroundColorSwatchClick" ToolTip="Black"/>
+                        <TextBox x:Name="BackgroundColorBox" TextChanged="BackgroundColorChanged" ToolTip="#RRGGBB. Also fills transparent pixels and empty space around the image."/>
+                    </DockPanel>
+                    <TextBlock Text="Image fit"/>
+                    <ComboBox x:Name="BackgroundFitBox" SelectionChanged="BackgroundFitChanged" Margin="0,4,0,8">
+                        <ComboBoxItem Tag="cover" Content="Fill screen (crop)"/>
+                        <ComboBoxItem Tag="fit" Content="Fit whole image"/>
+                        <ComboBoxItem Tag="stretch" Content="Stretch to screen"/>
+                        <ComboBoxItem Tag="center" Content="Original size"/>
+                    </ComboBox>
+                    <TextBlock x:Name="BackgroundZoomInfo" Text="Zoom · 100%"/>
+                    <Slider x:Name="BackgroundZoomSlider" Minimum="10" Maximum="400" Value="100" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="BackgroundZoomChanged" Margin="0,4,0,8"/>
+                    <UniformGrid Columns="2" Margin="0,0,0,8">
+                        <StackPanel Margin="0,0,4,0"><TextBlock Text="X offset"/><TextBox x:Name="BackgroundXBox" Margin="0,4,0,0" TextChanged="BackgroundPositionChanged"/></StackPanel>
+                        <StackPanel Margin="4,0,0,0"><TextBlock Text="Y offset"/><TextBox x:Name="BackgroundYBox" Margin="0,4,0,0" TextChanged="BackgroundPositionChanged"/></StackPanel>
+                    </UniformGrid>
+                    <Button x:Name="ResetBackgroundPlacementButton" Content="Reset placement" Click="ResetBackgroundPlacementClick"/>
+                    <TextBlock Text="Live preview. The background stays below all elements." TextWrapping="Wrap" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="Package" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/>
                     <TextBlock Text="Starting ID: 253 · switches automatically if occupied" TextWrapping="Wrap" Margin="0,0,0,8"/>
                     <TextBlock Text="Package name (up to 15 bytes)"/>
                     <TextBox x:Name="NameBox" Margin="0,4,0,8" Text="my_face"/>
                     <TextBlock Text="Watch title"/>
-                    <TextBox x:Name="TitleBox" Margin="0,4,0,0" Text="VS Code"/>
+                    <TextBox x:Name="TitleBox" Margin="0,4,0,0" Text="My face"/>
                 </StackPanel>
             </Border>
             <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
