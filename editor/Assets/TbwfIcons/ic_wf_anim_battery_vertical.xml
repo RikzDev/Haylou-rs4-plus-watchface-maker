@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<animation-list visible="true" variablePadding="false" oneshot="false"><item duration="1000" drawable="@drawable/ic_wf_battery_vertical_0" /><item duration="1000" drawable="@drawable/ic_wf_battery_vertical_20" /><item duration="1000" drawable="@drawable/ic_wf_battery_vertical_50" /><item duration="1000" drawable="@drawable/ic_wf_battery_vertical_80" /><item duration="1000" drawable="@drawable/ic_wf_battery_vertical_100" /></animation-list>

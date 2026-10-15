@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Text.Json;
@@ -11,48 +10,16 @@ namespace HaylouFaceEditor;
 
 public partial class MainWindow
 {
-    readonly string _iconCache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "HaylouFaceEditor", "tbwf-icons");
     Dictionary<string, string>? _builtinIcons;
-    bool _iconLibraryAttempted;
 
-    void LoadIconLibraryClick(object sender, RoutedEventArgs e)
+    void EnsureBuiltinIconLibrary()
     {
-        var dialog = new Microsoft.Win32.OpenFileDialog { Filter = "Hello Haylou Android app|*.apk", Title = "Load TBWF icon library from Hello Haylou" };
-        if (dialog.ShowDialog() != true) return;
-        try
-        {
-            LoadIconLibrary(dialog.FileName);
-            Log("Icon library loaded. Import the TBWF again to include its built-in icons.");
-        }
-        catch (Exception error) { Log("Cannot load icon library: " + error.Message, LogLevel.Error); }
-    }
-
-    void LoadIconLibrary(string apk)
-    {
-        var helper = Path.Combine(WatchfaceRoot, "tbwf_icon_library.py");
-        var info = new ProcessStartInfo(FindPython()) { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
-        info.ArgumentList.Add(helper);
-        info.ArgumentList.Add(apk);
-        info.ArgumentList.Add(_iconCache);
-        using var process = Process.Start(info) ?? throw new IOException("Cannot start the icon library reader.");
-        var output = process.StandardOutput.ReadToEndAsync();
-        var errors = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(30000))
-        {
-            process.Kill();
-            throw new IOException("Icon library reader timed out.");
-        }
-        if (process.ExitCode != 0) throw new IOException(errors.GetAwaiter().GetResult().Trim());
-        ReadIconIndex();
-        _iconLibraryAttempted = true;
-        Log(output.GetAwaiter().GetResult().Trim());
-    }
-
-    void ReadIconIndex()
-    {
-        using var doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(_iconCache, "index.json")));
-        _builtinIcons = doc.RootElement.GetProperty("icons").EnumerateObject()
-            .ToDictionary(p => p.Name, p => Path.Combine(_iconCache, p.Value.GetString()!), StringComparer.OrdinalIgnoreCase);
+        if (_builtinIcons != null) return;
+        var assembly = typeof(MainWindow).Assembly;
+        const string prefix = "HaylouFaceEditor.Assets.TbwfIcons.";
+        _builtinIcons = assembly.GetManifestResourceNames()
+            .Where(name => name.StartsWith(prefix, StringComparison.Ordinal) && name.EndsWith(".xml", StringComparison.Ordinal))
+            .ToDictionary(name => name[prefix.Length..^4], name => "embedded:" + name, StringComparer.OrdinalIgnoreCase);
     }
 
     List<BitmapSource> BuiltinIconFrames(string resourcePath, JsonElement element, int target)
@@ -61,32 +28,10 @@ public partial class MainWindow
         var prefix = name.IndexOf("ic_wf_", StringComparison.Ordinal);
         if (prefix < 0) return new();
         name = name[prefix..];
-        if (!_iconLibraryAttempted)
-        {
-            _iconLibraryAttempted = true;
-            try
-            {
-                if (File.Exists(Path.Combine(_iconCache, "index.json")))
-                {
-                    using var index = JsonDocument.Parse(File.ReadAllText(Path.Combine(_iconCache, "index.json")));
-                    if (index.RootElement.TryGetProperty("version", out var version) && version.GetInt32() == 1) ReadIconIndex();
-                    else LoadIconLibrary(index.RootElement.GetProperty("apk").GetString()!);
-                }
-                else
-                {
-                    var root = Directory.GetParent(WatchfaceRoot)!.FullName;
-                    var apk = Environment.GetEnvironmentVariable("HAYLOU_HELLO_APK");
-                    if (string.IsNullOrWhiteSpace(apk))
-                        apk = new[] { "Hello+Haylou.apk", "HelloHaylou.apk", "Hello Haylou.apk" }
-                            .Select(file => Path.Combine(root, file)).FirstOrDefault(File.Exists);
-                    if (!string.IsNullOrWhiteSpace(apk)) LoadIconLibrary(apk);
-                }
-            }
-            catch (Exception error) { Log("Cannot load TBWF built-in icons: " + error.Message, LogLevel.Warning); }
-        }
+        EnsureBuiltinIconLibrary();
         if (_builtinIcons == null || !_builtinIcons.ContainsKey(name)) return new();
-        var tint = ReadIconTint(element);
-        return RenderBuiltinDrawable(name, target, tint, new HashSet<string>());
+        // Keep an untinted alpha mask so subsequent color changes are reversible.
+        return RenderBuiltinDrawable(name, target, Colors.White, new HashSet<string>());
     }
 
     static Color ReadIconTint(JsonElement element)
@@ -109,7 +54,14 @@ public partial class MainWindow
             if (_builtinIcons == null || !_builtinIcons.TryGetValue(name, out var path))
                 throw new FileNotFoundException("Missing built-in drawable: " + name);
             if (!path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)) return new() { LoadBitmap(path) };
-            var root = XDocument.Load(path).Root ?? throw new InvalidDataException("Empty Android drawable.");
+            XElement root;
+            if (path.StartsWith("embedded:", StringComparison.Ordinal))
+            {
+                using var resource = typeof(MainWindow).Assembly.GetManifestResourceStream(path[9..])
+                    ?? throw new FileNotFoundException("Missing embedded icon: " + name);
+                root = XDocument.Load(resource).Root ?? throw new InvalidDataException("Empty Android drawable.");
+            }
+            else root = XDocument.Load(path).Root ?? throw new InvalidDataException("Empty Android drawable.");
             if (root.Name.LocalName == "animation-list")
             {
                 var frames = new List<BitmapSource>();

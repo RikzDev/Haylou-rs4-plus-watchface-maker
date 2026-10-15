@@ -526,7 +526,7 @@ public partial class MainWindow : Window
         AnimationList.ItemsSource = _animations;
         AnimationInfo.Text = _animations.Count == 0
             ? "none"
-            : $"{_animations.Count} item(ns)";
+            : $"{_animations.Count} items";
         ShowAnimation(selected);
     }
 
@@ -540,6 +540,8 @@ public partial class MainWindow : Window
         if (animation == null)
         {
             AnimationNameBox.Text = "";
+            AnimationColorBox.Text = "";
+            AnimationColorBox.IsEnabled = false;
             AnimationXBox.Text = "";
             AnimationYBox.Text = "";
             AnimationWidthBox.Text = "";
@@ -550,6 +552,8 @@ public partial class MainWindow : Window
         else
         {
             AnimationNameBox.Text = animation.Label;
+            AnimationColorBox.Text = animation.TintColor ?? "";
+            AnimationColorBox.IsEnabled = true;
             AnimationXBox.Text = animation.X.ToString();
             AnimationYBox.Text = animation.Y.ToString();
             AnimationWidthBox.Text = animation.Width.ToString();
@@ -645,7 +649,7 @@ public partial class MainWindow : Window
             AnimationFrameSlider.Value = index;
             AnimationFrameInfo.Text = _animationPreviewMode switch
             {
-                "live" => $"Live data · quadro {index + 1} de {count}",
+                "live" => $"Live data · frame {index + 1} of {count}",
                 "loop" => _animationPreviewPlaying ? $"Playing · {count} frames" : $"Loop paused · frame {index + 1} of {count}",
                 _ => $"Frame {index + 1} of {count}",
             };
@@ -730,10 +734,12 @@ public partial class MainWindow : Window
         foreach (var file in dialog.FileNames)
         {
             _selectedAnimation.Frames.Insert(index, file);
+            if (_selectedAnimation.OriginalFrames.Count > 0) _selectedAnimation.OriginalFrames.Insert(index, file);
             _selectedAnimation.Previews.Insert(index, LoadBitmap(file));
             _selectedAnimation.FrameOffsets.Insert(index, new FrameOffset());
             index++;
         }
+        if (_selectedAnimation.TintColor != null) SetAnimationTint(_selectedAnimation, _selectedAnimation.TintColor);
         _savedBin = null;
         RefreshFrames(index - 1);
         Redraw();
@@ -749,6 +755,7 @@ public partial class MainWindow : Window
             return;
         }
         _selectedAnimation.Frames.RemoveAt(_selectedFrameIndex);
+        if (_selectedAnimation.OriginalFrames.Count > 0) _selectedAnimation.OriginalFrames.RemoveAt(_selectedFrameIndex);
         _selectedAnimation.Previews.RemoveAt(_selectedFrameIndex);
         _selectedAnimation.FrameOffsets.RemoveAt(_selectedFrameIndex);
         _savedBin = null;
@@ -769,6 +776,9 @@ public partial class MainWindow : Window
             return;
         (_selectedAnimation.Frames[_selectedFrameIndex], _selectedAnimation.Frames[target]) =
             (_selectedAnimation.Frames[target], _selectedAnimation.Frames[_selectedFrameIndex]);
+        if (_selectedAnimation.OriginalFrames.Count > 0)
+            (_selectedAnimation.OriginalFrames[_selectedFrameIndex], _selectedAnimation.OriginalFrames[target]) =
+                (_selectedAnimation.OriginalFrames[target], _selectedAnimation.OriginalFrames[_selectedFrameIndex]);
         (_selectedAnimation.Previews[_selectedFrameIndex], _selectedAnimation.Previews[target]) =
             (_selectedAnimation.Previews[target], _selectedAnimation.Previews[_selectedFrameIndex]);
         (_selectedAnimation.FrameOffsets[_selectedFrameIndex], _selectedAnimation.FrameOffsets[target]) =
@@ -1075,7 +1085,7 @@ public partial class MainWindow : Window
                     continue;
                 }
                 if (rawFrames.Count > 0)
-                    Log($"Resolved {property.Name} from the Hello Haylou icon library ({rawFrames.Count} frames).");
+                    Log($"Resolved {property.Name} from the built-in icon library ({rawFrames.Count} frames).");
             }
             foreach (var entry in entries)
             {
@@ -1088,7 +1098,7 @@ public partial class MainWindow : Window
             if (rawFrames.Count < 1)
             {
                 Log(isIcon
-                    ? $"Icon {property.Name} references {resourcePath}, which is not embedded. Load the Hello Haylou APK with 'Load TBWF icon library (APK)' and import again."
+                    ? $"Icon {property.Name} references {resourcePath}, which is absent from both the TBWF and the built-in icon library."
                     : $"Image {property.Name} uses {resourcePath}, but its frames are missing from the TBWF.", LogLevel.Warning);
                 continue;
             }
@@ -1125,6 +1135,7 @@ public partial class MainWindow : Window
                     _ => "loop",
                 },
             });
+            if (isIcon) SetAnimationTint(_animations[^1], ReadIconTint(element).ToString());
             if (frames.Count > 1 && property.Name is "weatherResource" or "connectionResource")
                 Log($"{property.Name}: all icon frames were imported as a fixed image. Automatic weather/connection state selection is not supported yet; inspect or reorder frames in the sequence editor.", LogLevel.Warning);
             Log($"Animation {property.Name}: {frames.Count} frames.");
@@ -1416,6 +1427,8 @@ public partial class MainWindow : Window
             {
                 Label = saved.Label,
                 Frames = frames,
+                OriginalFrames = saved.OriginalFrames.Select(file => Path.Combine(Path.GetDirectoryName(path)!, file)).ToList(),
+                TintColor = saved.TintColor,
                 Previews = previews,
                 X = saved.X,
                 Y = saved.Y,
@@ -1427,6 +1440,9 @@ public partial class MainWindow : Window
                     ? saved.FrameOffsets[index]
                     : new FrameOffset()).ToList(),
             });
+            if (_animations[^1].OriginalFrames.Count > 0 && (_animations[^1].OriginalFrames.Count != frames.Count
+                || _animations[^1].OriginalFrames.Any(file => !File.Exists(file))))
+                throw new InvalidDataException($"Original image frames are missing for {saved.Label}.");
         }
         _savedBin = null;
         RefreshFontChoices();
@@ -1498,11 +1514,17 @@ public partial class MainWindow : Window
         }
         var frameFolder = Path.Combine(folder, Path.GetFileNameWithoutExtension(path) + "-frames");
         Directory.CreateDirectory(frameFolder);
+        // Snapshot before writing: reordered frames may already live at the
+        // destination paths of other frames in this saved project.
+        var frameAssets = _animations.SelectMany(animation => animation.Frames.Concat(animation.OriginalFrames))
+            .Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase).Where(File.Exists)
+            .ToDictionary(file => file, File.ReadAllBytes, StringComparer.OrdinalIgnoreCase);
         var savedAnimations = new List<SavedAnimation>();
         for (var animationIndex = 0; animationIndex < _animations.Count; animationIndex++)
         {
             var animation = _animations[animationIndex];
             var savedFrames = new List<string>();
+            var savedOriginalFrames = new List<string>();
             var savedOffsets = new List<FrameOffset>();
             for (var frameIndex = 0; frameIndex < animation.Frames.Count; frameIndex++)
             {
@@ -1512,8 +1534,17 @@ public partial class MainWindow : Window
                 var name = $"a{animationIndex:D2}_{frameIndex:D2}.png";
                 var destination = Path.Combine(frameFolder, name);
                 if (!Path.GetFullPath(source).Equals(Path.GetFullPath(destination), StringComparison.OrdinalIgnoreCase))
-                    File.Copy(source, destination, true);
+                    File.WriteAllBytes(destination, frameAssets[Path.GetFullPath(source)]);
                 savedFrames.Add(Path.Combine(Path.GetFileName(frameFolder), name));
+                if (animation.OriginalFrames.Count > 0)
+                {
+                    var originalName = $"a{animationIndex:D2}_original_{frameIndex:D2}.png";
+                    var originalDest = Path.Combine(frameFolder, originalName);
+                    var original = animation.OriginalFrames[frameIndex];
+                    if (!Path.GetFullPath(original).Equals(Path.GetFullPath(originalDest), StringComparison.OrdinalIgnoreCase))
+                        File.WriteAllBytes(originalDest, frameAssets[Path.GetFullPath(original)]);
+                    savedOriginalFrames.Add(Path.Combine(Path.GetFileName(frameFolder), originalName));
+                }
                 savedOffsets.Add(animation.OffsetAt(frameIndex));
             }
             if (savedFrames.Count >= 1)
@@ -1522,6 +1553,8 @@ public partial class MainWindow : Window
                 {
                     Label = animation.Label,
                     Frames = savedFrames,
+                    OriginalFrames = savedOriginalFrames,
+                    TintColor = animation.TintColor,
                     FrameOffsets = savedOffsets,
                     X = animation.X,
                     Y = animation.Y,
@@ -1768,6 +1801,8 @@ public partial class MainWindow : Window
     void SetBusy(bool busy)
     {
         ImportButton.IsEnabled = !busy;
+        IconLibraryButton.IsEnabled = !busy;
+        AddLibraryFramesButton.IsEnabled = !busy;
         OpenButton.IsEnabled = !busy;
         SaveProjectButton.IsEnabled = !busy;
         SaveBinButton.IsEnabled = !busy;
@@ -1944,6 +1979,7 @@ public partial class MainWindow : Window
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
         bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
         bitmap.UriSource = new Uri(path);
         bitmap.EndInit();
         return CopyPixels(bitmap);
@@ -2069,6 +2105,9 @@ public sealed class HandItem
 
 public sealed class AnimationItem
 {
+    public string AssetKey { get; } = Guid.NewGuid().ToString("N");
+    public List<string> OriginalFrames { get; set; } = new();
+    public string? TintColor { get; set; }
     public string Label { get; set; } = "Animation";
     public List<string> Frames { get; set; } = new();
     public List<BitmapSource> Previews { get; set; } = new();
@@ -2136,6 +2175,8 @@ public sealed class FrameOffset
 
 public sealed class SavedAnimation
 {
+    public List<string> OriginalFrames { get; set; } = new();
+    public string? TintColor { get; set; }
     public string Label { get; set; } = "Animation";
     public List<string> Frames { get; set; } = new();
     public List<FrameOffset> FrameOffsets { get; set; } = new();

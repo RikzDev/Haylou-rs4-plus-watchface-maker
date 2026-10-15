@@ -26,7 +26,7 @@
                        Text="Click to select. Drag to move and use the handles to resize. Shift keeps proportions; Esc cancels."/>
             <StackPanel DockPanel.Dock="Top" Margin="0,0,0,16">
                 <Button x:Name="ImportButton" Content="Import TBWF" Margin="0,0,0,8" Click="ImportClick"/>
-                <Button Content="Load TBWF icon library (APK)" Margin="0,0,0,8" Click="LoadIconLibraryClick" ToolTip="Read built-in icons from your Hello Haylou APK, then import the TBWF again."/>
+                <Button x:Name="IconLibraryButton" Content="Icon library" Margin="0,0,0,8" Click="OpenIconLibraryClick" ToolTip="Browse the built-in icons and add an icon or sequence."/>
                 <Button x:Name="OpenButton" Content="Open project" Margin="0,0,0,8" Click="OpenClick"/>
                 <Button x:Name="SaveProjectButton" Content="Save project" Margin="0,0,0,8" Click="SaveProjectClick"/>
                 <Button x:Name="SaveBinButton" Content="Generate .bin" Margin="0,0,0,8" Click="SaveBinClick"/>
@@ -59,6 +59,20 @@
                     </UniformGrid>
                     <TextBlock Text="Name"/>
                     <TextBox x:Name="AnimationNameBox" Margin="0,4,0,8" TextChanged="AnimationChanged"/>
+                    <TextBlock Text="Icon / image color"/>
+                    <DockPanel Margin="0,4,0,6">
+                        <Button DockPanel.Dock="Right" Content="Original" Margin="6,0,0,0" Padding="8,4" Click="ResetAnimationColorClick" ToolTip="Restore the original colors"/>
+                        <TextBox x:Name="AnimationColorBox" TextChanged="AnimationColorChanged" ToolTip="#RRGGBB or #AARRGGBB. Leave blank for the original colors."/>
+                    </DockPanel>
+                    <UniformGrid Columns="6" Margin="0,0,0,5">
+                        <Button Tag="#FFFFFF" Background="White" Height="22" Margin="0,0,3,0" ToolTip="White" Click="AnimationColorSwatchClick"/>
+                        <Button Tag="#000000" Background="Black" Height="22" Margin="0,0,3,0" ToolTip="Black" Click="AnimationColorSwatchClick"/>
+                        <Button Tag="#FF4444" Background="#FF4444" Height="22" Margin="0,0,3,0" ToolTip="Red" Click="AnimationColorSwatchClick"/>
+                        <Button Tag="#FFD54F" Background="#FFD54F" Height="22" Margin="0,0,3,0" ToolTip="Yellow" Click="AnimationColorSwatchClick"/>
+                        <Button Tag="#66BB6A" Background="#66BB6A" Height="22" Margin="0,0,3,0" ToolTip="Green" Click="AnimationColorSwatchClick"/>
+                        <Button Tag="#42A5F5" Background="#42A5F5" Height="22" ToolTip="Blue" Click="AnimationColorSwatchClick"/>
+                    </UniformGrid>
+                    <TextBlock Text="HEX color; applies to every frame. Original restores the source artwork." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
                     <TextBlock Text="Mode"/>
                     <ComboBox x:Name="AnimationSourceBox" Margin="0,4,0,8" SelectionChanged="AnimationChanged"/>
                     <TextBlock Text="Sequence preview"/>
@@ -103,6 +117,7 @@
                         <StackPanel Margin="0,0,8,0"><TextBlock Text="X offset"/><TextBox x:Name="FrameOffsetXBox" Margin="0,4,0,0" TextChanged="FrameOffsetChanged"/></StackPanel>
                         <StackPanel><TextBlock Text="Y offset"/><TextBox x:Name="FrameOffsetYBox" Margin="0,4,0,0" TextChanged="FrameOffsetChanged"/></StackPanel>
                     </UniformGrid>
+                    <Button x:Name="AddLibraryFramesButton" Content="Add icons as frames..." Margin="0,0,0,8" Click="OpenIconLibraryClick" ToolTip="Select library icons, then choose Add to selected sequence."/>
                     <UniformGrid Columns="2" Margin="0,0,0,8">
                         <Button x:Name="AddFrameButton" Content="Add frames" Margin="0,0,4,4" Click="AddFramesToAnimationClick"/>
                         <Button x:Name="RemoveFrameButton" Content="Remove frame" Margin="4,0,0,4" Click="RemoveFrameClick"/>

@@ -1,0 +1,2 @@
+<?xml version='1.0' encoding='utf-8'?>
+<animation-list visible="true" variablePadding="false" oneshot="false"><item duration="1000" drawable="@drawable/ic_wf_circle" /><item duration="1000" drawable="@drawable/ic_wf_circle" /><item duration="1000" drawable="@drawable/ic_wf_circle" /><item duration="1000" drawable="@drawable/ic_wf_circle" /><item duration="1000" drawable="@drawable/ic_wf_circle" /></animation-list>

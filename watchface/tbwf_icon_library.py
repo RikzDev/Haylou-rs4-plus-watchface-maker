@@ -1,8 +1,9 @@
 """Read TBWF built-in drawable resources from a user-supplied Hello Haylou APK.
 
-Only the local cache contains the original artwork. No APK or app artwork is
-redistributed with the editor. This reads Android resource tables and binary
-XML directly, without apktool, Java or additional Python dependencies.
+This development tool exports drawable definitions that can be embedded in the
+editor. It reads Android resource tables and binary XML directly, without
+apktool, Java or additional Python dependencies. The editor's bundled library
+does not require this tool or the APK at runtime.
 """
 from __future__ import annotations
 

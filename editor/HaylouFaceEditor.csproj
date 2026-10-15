@@ -9,4 +9,7 @@
     <AssemblyName>HaylouFaceEditor</AssemblyName>
     <ApplicationTitle>RS4 Plus Watchface Editor</ApplicationTitle>
   </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Assets\TbwfIcons\*.xml" />
+  </ItemGroup>
 </Project>
