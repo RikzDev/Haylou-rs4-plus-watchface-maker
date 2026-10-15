@@ -183,6 +183,7 @@ public partial class MainWindow : Window
                 Cursor = Cursors.SizeAll,
             };
             border.MouseLeftButtonDown += BeginDrag;
+            Panel.SetZIndex(border, widget.ZIndex);
             Canvas.SetLeft(border, widget.X);
             Canvas.SetTop(border, widget.Y);
             Overlay.Children.Add(border);
@@ -1367,7 +1368,7 @@ public partial class MainWindow : Window
         _widgets.Clear();
         foreach (var saved in project.Widgets)
         {
-            var widget = new Widget { Key = saved.Key, Label = string.IsNullOrWhiteSpace(saved.Label) ? saved.Key : saved.Label };
+            var widget = new Widget { Key = saved.Key, Label = string.IsNullOrWhiteSpace(saved.Label) ? saved.Key : saved.Label, ZIndex = saved.ZIndex };
             widget.X = saved.X;
             widget.Y = saved.Y;
             widget.Color = saved.Color;
@@ -1403,6 +1404,7 @@ public partial class MainWindow : Window
             _hands.Add(new HandItem
             {
                 Kind = saved.Kind, File = handFile, Preview = bitmap,
+                ZIndex = saved.ZIndex,
                 Width = saved.Width > 0 ? saved.Width : bitmap.PixelWidth,
                 Height = saved.Height > 0 ? saved.Height : bitmap.PixelHeight,
                 PivotX = saved.PivotX, PivotY = saved.PivotY,
@@ -1426,6 +1428,7 @@ public partial class MainWindow : Window
             {
                 Label = saved.Label,
                 Frames = frames,
+                ZIndex = saved.ZIndex,
                 OriginalFrames = saved.OriginalFrames.Select(file => Path.Combine(Path.GetDirectoryName(path)!, file)).ToList(),
                 TintColor = saved.TintColor,
                 Previews = previews,
@@ -1547,6 +1550,7 @@ public partial class MainWindow : Window
                 savedAnimations.Add(new SavedAnimation
                 {
                     Label = animation.Label,
+                    ZIndex = animation.ZIndex,
                     Frames = savedFrames,
                     OriginalFrames = savedOriginalFrames,
                     TintColor = animation.TintColor,
@@ -1569,6 +1573,7 @@ public partial class MainWindow : Window
             return new SavedHand
             {
                 Kind = hand.Kind, File = Path.Combine(Path.GetFileName(frameFolder), filename),
+                ZIndex = hand.ZIndex,
                 Width = hand.Width, Height = hand.Height, PivotX = hand.PivotX, PivotY = hand.PivotY,
                 PivotFracX = hand.PivotFracX, PivotFracY = hand.PivotFracY,
                 PosX = hand.PosX, PosY = hand.PosY, PreviewDegrees = hand.PreviewDegrees,
@@ -1588,6 +1593,7 @@ public partial class MainWindow : Window
             {
                 Key = widget.Key,
                 Label = widget.Label,
+                ZIndex = widget.ZIndex,
                 X = widget.X,
                 Y = widget.Y,
                 Color = widget.Color,
@@ -1666,6 +1672,7 @@ public partial class MainWindow : Window
             widgets = _widgets.Select(widget => new
             {
                 key = widget.Key,
+                z_index = widget.ZIndex,
                 x = widget.X,
                 y = widget.Y,
                 color = widget.Color,
@@ -1679,6 +1686,7 @@ public partial class MainWindow : Window
             hands = _hands.Select(hand => new
             {
                 kind = hand.Kind,
+                z_index = hand.ZIndex,
                 file = hand.File,
                 width = hand.Width,
                 height = hand.Height,
@@ -1690,6 +1698,7 @@ public partial class MainWindow : Window
             animations = _animations.Select(animation => new
             {
                 frames = animation.Frames,
+                z_index = animation.ZIndex,
                 x = animation.X,
                 y = animation.Y,
                 width = animation.Width,
@@ -1788,6 +1797,9 @@ public partial class MainWindow : Window
     void SetBusy(bool busy)
     {
         BackgroundEditorPanel.IsEnabled = !busy;
+        _layerBusy = busy;
+        LayerList.IsEnabled = !busy;
+        RefreshLayers();
         ImportButton.IsEnabled = !busy;
         IconLibraryButton.IsEnabled = !busy;
         AddLibraryFramesButton.IsEnabled = !busy;
@@ -2013,6 +2025,7 @@ public partial class MainWindow : Window
 
 public sealed class Widget
 {
+    public int ZIndex { get; set; } = 200;
     public string Key { get; set; } = "";
     public string Label { get; set; } = "";
     public int X { get; set; }
@@ -2048,6 +2061,7 @@ public sealed class SavedFont
 
 public sealed class SavedHand
 {
+    public int ZIndex { get; set; } = 100;
     public string Kind { get; set; } = "";
     public string File { get; set; } = "";
     public int Width { get; set; }
@@ -2063,6 +2077,7 @@ public sealed class SavedHand
 
 public sealed class SavedWidget
 {
+    public int ZIndex { get; set; } = 200;
     public string Key { get; set; } = "";
     public string Label { get; set; } = "";
     public int X { get; set; }
@@ -2078,6 +2093,7 @@ public sealed class SavedWidget
 
 public sealed class HandItem
 {
+    public int ZIndex { get; set; } = 100;
     public string Kind { get; set; } = "";
     public string File { get; set; } = "";
     public BitmapSource? Preview { get; set; }
@@ -2094,6 +2110,7 @@ public sealed class HandItem
 
 public sealed class AnimationItem
 {
+    public int ZIndex { get; set; }
     public string AssetKey { get; } = Guid.NewGuid().ToString("N");
     public List<string> OriginalFrames { get; set; } = new();
     public string? TintColor { get; set; }
@@ -2164,6 +2181,7 @@ public sealed class FrameOffset
 
 public sealed class SavedAnimation
 {
+    public int ZIndex { get; set; }
     public List<string> OriginalFrames { get; set; } = new();
     public string? TintColor { get; set; }
     public string Label { get; set; } = "Animation";

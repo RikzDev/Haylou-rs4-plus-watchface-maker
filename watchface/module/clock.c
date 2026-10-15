@@ -659,6 +659,63 @@ static int face_init(void *parent)
     face->minute_hand = 0;
     face->second_hand = 0;
     face->animation_ticks = 0;
+#ifdef DRAW_ORDER_COUNT
+    /* LVGL siblings paint in creation order. Create complete elements in
+       the exact same stable layer order as the editor; no new firmware API. */
+#if GLYPH_SLOT_COUNT
+    for (int slot = 0; slot < GLYPH_SLOT_COUNT; slot++)
+        face->glyphs[slot] = 0;
+#endif
+#if ANIMATION_COUNT
+    for (int index = 0; index < ANIMATION_COUNT; index++) {
+        face->animations[index].image = 0;
+        face->animations[index].frame = (unsigned)-1;
+    }
+#endif
+    for (int order = 0; order < DRAW_ORDER_COUNT; order++) {
+        int index = draw_items[order].index;
+        switch (draw_items[order].kind) {
+#if HAS_HOUR
+        case 1:
+            face->hour_hand = place_hand(parent, &hour_hand, HOUR_POS_X, HOUR_POS_Y, HOUR_PIVOT_X, HOUR_PIVOT_Y);
+            break;
+#endif
+#if HAS_MINUTE
+        case 2:
+            face->minute_hand = place_hand(parent, &minute_hand, MINUTE_POS_X, MINUTE_POS_Y, MINUTE_PIVOT_X, MINUTE_PIVOT_Y);
+            break;
+#endif
+#if HAS_SECOND
+        case 3:
+            face->second_hand = place_hand(parent, &second_hand, SECOND_POS_X, SECOND_POS_Y, SECOND_PIVOT_X, SECOND_PIVOT_Y);
+            break;
+#endif
+#if GLYPH_LINE_COUNT
+        case 4: {
+            const img_dsc_t *blank = glyph_for(glyph_lines[index].set, ' ');
+            for (int slot = 0; slot < glyph_lines[index].slots; slot++)
+                face->glyphs[glyph_lines[index].slot + slot] = place_still(parent, blank,
+                    glyph_lines[index].x + slot * glyph_lines[index].pitch, glyph_lines[index].y);
+            break;
+        }
+#endif
+#if ANIMATION_COUNT
+        case 5:
+            face->animations[index].image = place_still(parent, animation_defs[index].frames[0],
+                animation_defs[index].x + animation_defs[index].offsets[0],
+                animation_defs[index].y + animation_defs[index].offsets[1]);
+            break;
+#endif
+#if LABEL_COUNT
+        case 6:
+            face->labels[index] = make_label(parent, label_defs[index].x, label_defs[index].y,
+                label_defs[index].color, label_defs[index].size);
+            break;
+#endif
+        default: break;
+        }
+    }
+#else
 #if HAS_HOUR
     face->hour_hand = place_hand(parent, &hour_hand, HOUR_POS_X, HOUR_POS_Y, HOUR_PIVOT_X, HOUR_PIVOT_Y);
 #endif
@@ -702,6 +759,7 @@ static int face_init(void *parent)
             label_defs[index].color,
             label_defs[index].size);
     }
+#endif
     tick(0);
     return 0;
 }

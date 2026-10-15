@@ -34,6 +34,7 @@ public partial class MainWindow
     void AddCanvasItem(object target, UIElement visual, double x, double y)
     {
         var border = new Border { Tag = target, Child = visual, Background = Brushes.Transparent, Cursor = Cursors.SizeAll };
+        Panel.SetZIndex(border, LayerIndex(target));
         border.MouseLeftButtonDown += BeginDrag;
         Canvas.SetLeft(border, x);
         Canvas.SetTop(border, y);
@@ -66,6 +67,7 @@ public partial class MainWindow
 
     void UpdateCanvasSelection()
     {
+        RefreshLayers();
         var exists = _canvasTarget switch
         {
             Widget widget => _widgets.Contains(widget),

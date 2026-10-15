@@ -289,6 +289,38 @@ def rgb565_bytes(color: str) -> tuple[int, int, int]:
     return int(text[0:2], 16), int(text[2:4], 16), int(text[4:6], 16)
 
 
+def layer_index(item: dict, default: int) -> int:
+    value = item.get("z_index", default)
+    if isinstance(value, bool) or not isinstance(value, int) or not -(2**31) <= value < 2**31:
+        raise ValueError("Z-index must be a signed 32-bit integer")
+    return value
+
+
+def draw_order(widgets: list, hands: list, glyphs: dict, animations: list) -> list[tuple[int, int]]:
+    """Bottom to top; equal indices follow the editor's stable collection order.
+
+    Kinds: 1/2/3 hour/minute/second hand, 4 glyph line, 5 animation, 6 label.
+    All slots of a text element remain together in the same layer.
+    """
+    entries = []
+    for index, item in enumerate(animations):
+        entries.append((layer_index(item, 0), 0, index, 5, index))
+    hand_kinds = {"hour": 1, "minute": 2, "second": 3}
+    for index, item in enumerate(hands):
+        if item.get("kind") in hand_kinds:
+            entries.append((layer_index(item, 100), 1, index, hand_kinds[item["kind"]], 0))
+    glyph_by_widget = {line.get("widget_index", index): index for index, line in enumerate(glyphs.get("lines", []))}
+    label_index = 0
+    for index, item in enumerate(widgets):
+        z = layer_index(item, 200)
+        if index in glyph_by_widget:
+            entries.append((z, 2, index, 4, glyph_by_widget[index]))
+        elif not str(item.get("font") or "").strip() and not item.get("characters"):
+            entries.append((z, 2, index, 6, label_index))
+            label_index += 1
+    return [(kind, index) for _, _, _, kind, index in sorted(entries)]
+
+
 def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, glyphs: dict | None = None, animations: list[dict] | None = None) -> None:
     labels = [item for item in widgets if not str(item.get("font") or "").strip() and not item.get("characters")]
     if len(labels) > 32:
@@ -331,7 +363,7 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
     if labels:
         lines += [
             "};",
-            "#define LABEL_COUNT ((int)(sizeof(label_defs) / sizeof(label_defs[0])))",
+            f"#define LABEL_COUNT {len(labels)}",
         ]
     else:
         lines += [
@@ -435,6 +467,12 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
         lines.append(f"#define {upper}_PIVOT_Y {int(item['pivoty'])}")
         lines.append(f"#define {upper}_POS_X {int(item['posx'])}")
         lines.append(f"#define {upper}_POS_Y {int(item['posy'])}")
+    order = draw_order(widgets, hands, info, animation_info)
+    lines += [
+        "typedef struct { int kind; int index; } draw_item_t;",
+        f"#define DRAW_ORDER_COUNT {len(order)}",
+        "static const draw_item_t draw_items[] = {" + (", ".join("{%d, %d}" % entry for entry in order) or "{0, 0}") + "};",
+    ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -493,6 +531,7 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
                 "y": int(raw["y"]),
                 "interval": max(200, min(10000, int(raw.get("interval", 1000)))),
                 "source": source,
+                "z_index": layer_index(raw, 0),
                 "symbols": symbols,
                 "offsets": offsets,
             }

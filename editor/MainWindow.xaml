@@ -68,6 +68,19 @@
             </Border>
             <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
                 <StackPanel>
+                    <TextBlock Text="Layers · front to back" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                    <ListBox x:Name="LayerList" Height="120" DisplayMemberPath="Display" SelectionChanged="LayerSelected" Margin="0,0,0,8"/>
+                    <TextBlock Text="Z-index · higher values appear in front" FontSize="11" Foreground="{StaticResource Muted}"/>
+                    <TextBox x:Name="LayerZIndexBox" TextChanged="LayerZIndexChanged" Margin="0,4,0,8"/>
+                    <UniformGrid Columns="2">
+                        <Button x:Name="BringToFrontButton" Content="Bring to front" Click="BringToFrontClick" Margin="0,0,4,0" FontSize="12"/>
+                        <Button x:Name="SendToBackButton" Content="Send to back" Click="SendToBackClick" Margin="4,0,0,0" FontSize="12"/>
+                    </UniformGrid>
+                    <TextBlock Text="Select covered elements here. The background stays below all layers." FontSize="11" TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,7,0,0"/>
+                </StackPanel>
+            </Border>
+            <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+                <StackPanel>
                     <TextBlock Text="Package" Foreground="{StaticResource Muted}" Margin="0,0,0,8"/>
                     <TextBlock Text="Starting ID: 253 · switches automatically if occupied" TextWrapping="Wrap" Margin="0,0,0,8"/>
                     <TextBlock Text="Package name (up to 15 bytes)"/>

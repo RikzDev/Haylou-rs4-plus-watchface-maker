@@ -37,10 +37,11 @@ def symbols(blob, dynamic_only=False):
 
 def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initialize=False,
                   *, weather_records=None, weather_size=340, unit_type=1, time_sequence=None,
-                  malloc_failure=False, trace=None):
+                  malloc_failure=False, trace=None, today_values=None, time_format=1,
+                  time_format_sequence=None, record_ticks=False, heart_bpm=72, heart_flags=1):
     from unicorn import Uc, UC_ARCH_ARM, UC_MODE_THUMB, UC_HOOK_CODE
     from unicorn.arm_const import (
-        UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R4,
+        UC_ARM_REG_R0, UC_ARM_REG_R1, UC_ARM_REG_R2, UC_ARM_REG_R3, UC_ARM_REG_R4,
         UC_ARM_REG_R5, UC_ARM_REG_R6, UC_ARM_REG_R7, UC_ARM_REG_R8,
         UC_ARM_REG_R9, UC_ARM_REG_R10, UC_ARM_REG_R11, UC_ARM_REG_SP,
         UC_ARM_REG_LR, UC_ARM_REG_PC,
@@ -109,14 +110,23 @@ def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initi
     next_object = face + 0x4000
     image_updates = 0
     object_sources = {}
+    draw_objects = []
+    object_positions = {}
+    object_image_names = {}
+    object_hidden = {}
+    label_texts = {}
+    image_names = {address: name for name, address in exports.items()
+                   if name in ("vscode_bg", "hour_hand", "minute_hand", "second_hand")
+                   or name.startswith("anim_") or (name.startswith("g") and "c" in name)}
     source_names = {address: name for name, address in exports.items() if name.startswith("g") and "c" in name}
     weather_calls, free_calls, time_calls = 0, 0, 0
+    format_calls = 0
     malloc_sizes = []
     heap = face + 0x8000
     heap_size = 0
 
     def callback(cpu, address, size, _):
-        nonlocal next_object, image_updates, weather_calls, free_calls, time_calls, heap_size
+        nonlocal next_object, image_updates, weather_calls, free_calls, time_calls, heap_size, format_calls
         if address == exit_address:
             cpu.emu_stop()
             return
@@ -132,12 +142,14 @@ def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initi
             cpu.mem_write(arg0, struct.pack("<H6B", *now))
             time_calls += 1
         elif name == "apph_cfg_time_format_get":
-            result = 1
+            result = (time_format_sequence or [time_format])[min(format_calls, len(time_format_sequence or [0]) - 1)]
+            format_calls += 1
         elif name == "apph_todayinfo_target_info_get":
-            payload = struct.pack("<4I", 0, 23000, 0, 1234) + b"\xa5" * max(0, today_size - 16)
+            values = {"raw0": 0, "calories": 23000, "distance": 0, "steps": 1234, **(today_values or {})}
+            payload = struct.pack("<4I", *(values[key] for key in ("raw0", "calories", "distance", "steps"))) + b"\xa5" * max(0, today_size - 16)
             cpu.mem_write(arg0, payload[:today_size])
         elif name == "apph_hrspo2_info_get":
-            cpu.mem_write(arg0, (bytes([1, 72, 99, 0]) + b"\x5a" * heart_size)[:heart_size])
+            cpu.mem_write(arg0, (bytes([heart_flags, heart_bpm, 99, 0]) + b"\x5a" * heart_size)[:heart_size])
         elif name == "get_sync_data":
             result = sync
         elif name == "rt_malloc":
@@ -170,6 +182,8 @@ def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initi
         elif name in ("lv_img_create", "lv_label_create", "lv_task_create"):
             result = next_object
             next_object += 32
+            if name != "lv_task_create":
+                draw_objects.append((result, "image" if name == "lv_img_create" else "label"))
         elif name == "lv_img_set_src":
             header, data_size, pixels = struct.unpack("<III", cpu.mem_read(arg1, 12))
             if not ((header >> 10) & 2047) or not ((header >> 21) & 2047):
@@ -177,8 +191,29 @@ def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initi
             cpu.mem_read(pixels, data_size)
             image_updates += 1
             object_sources[arg0] = source_names.get(arg1, "")
-        elif name in ("lv_obj_set_pos", "lv_page_glue_obj", "lv_obj_set_parent_event",
-                      "lv_label_set_text", "lv_ext_set_local_font", "lv_img_set_pivot",
+            object_image_names[arg0] = image_names.get(arg1, "")
+        elif name == "lv_obj_set_pos":
+            signed = lambda value: value if value < 0x80000000 else value - 0x100000000
+            object_positions[arg0] = (signed(arg1), signed(cpu.reg_read(UC_ARM_REG_R2)))
+        elif name == "lv_obj_set_hidden":
+            object_hidden[arg0] = bool(arg1)
+        elif name == "lv_label_set_text":
+            label_texts[arg0] = read_string(arg1)
+        elif name == "sprintf":
+            fmt = read_string(arg1)
+            signed = lambda value: value if value < 0x80000000 else value - 0x100000000
+            args = [cpu.reg_read(UC_ARM_REG_R2), cpu.reg_read(UC_ARM_REG_R3)]
+            count = fmt.count('%')
+            if count > 2:
+                raise RuntimeError("sprintf mock supports at most two values")
+            import re
+            conversions = re.findall(r"%[0-9]*([du])", fmt)
+            args = [signed(value) if conversion == 'd' else value for value, conversion in zip(args, conversions)]
+            text = fmt.replace('u', 'd') % tuple(args[:count]) if count else fmt
+            cpu.mem_write(arg0, text.encode('ascii') + b'\0')
+            result = len(text)
+        elif name in ("lv_page_glue_obj", "lv_obj_set_parent_event",
+                      "lv_ext_set_local_font", "lv_img_set_pivot",
                       "lv_img_set_angle", "lv_img_set_antialias"):
             pass
         elif name == "memset":
@@ -190,6 +225,17 @@ def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initi
         cpu.reg_write(UC_ARM_REG_PC, cpu.reg_read(UC_ARM_REG_LR))
 
     cpu.hook_add(UC_HOOK_CODE, callback)
+    def read_string(address):
+        data = bytearray()
+        for index in range(64):
+            value = bytes(cpu.mem_read(address + index, 1))
+            if value == b'\0':
+                return data.decode('ascii')
+            data.extend(value)
+        raise RuntimeError("Unterminated string")
+
+    def glyph_text():
+        return "".join(chr(int(name.split("c", 1)[1])) for name in object_sources.values() if name)
     registers = [UC_ARM_REG_R4, UC_ARM_REG_R5, UC_ARM_REG_R6, UC_ARM_REG_R7,
                  UC_ARM_REG_R8, UC_ARM_REG_R9, UC_ARM_REG_R10, UC_ARM_REG_R11]
     expected = [0x11000000 + index for index in range(len(registers))]
@@ -208,11 +254,18 @@ def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initi
             raise RuntimeError(f"{function} corrupted saved registers: " + ", ".join(changed))
     if initialize:
         call("face_init")
+    ticks = []
     for _ in range(iterations):
         call("tick")
+        if record_ticks:
+            ticks.append(dict(glyph_text=glyph_text(), labels=list(label_texts.values()),
+                              hidden=list(object_hidden.values()),
+                              images=[object_image_names.get(obj, '') for obj, _ in draw_objects]))
     if trace is not None:
         trace.update(weather_calls=weather_calls, malloc_sizes=malloc_sizes, free_calls=free_calls,
-                     glyph_text="".join(chr(int(name.split("c", 1)[1])) for name in object_sources.values() if name))
+                     draw_objects=[dict(type=kind, source=object_image_names.get(obj, ""),
+                                        position=object_positions.get(obj), hidden=object_hidden.get(obj, False)) for obj, kind in draw_objects],
+                     glyph_text=glyph_text(), label_texts=list(label_texts.values()), ticks=ticks)
     detail = f", {image_updates} validated image-source updates" if initialize else ""
     return f"tick preserved stack/registers in {iterations} iterations (today={today_size}, heart={heart_size}{detail})"
 
