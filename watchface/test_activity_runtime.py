@@ -100,10 +100,10 @@ class ActivityRuntimeTests(unittest.TestCase):
             prepare_animations([dict(source='ampm', frames=['dummy.png'])], Path(folder))
 
     def test_activity_frame_selectors_use_calories_and_display_unit(self):
-        for unit, frame in ((1, 'anim_2_2'), (2, 'anim_2_0')):
+        for unit, frame in ((1, 'anim_2_1'), (2, 'anim_2_0')):
             trace = self.run_activity(unit_type=unit, today_values={'calories': 11000, 'distance': 500000})
             sources = [obj['source'] for obj in trace['draw_objects']]
-            self.assertIn('anim_1_2', sources)
+            self.assertIn('anim_1_0', sources)
             self.assertIn(frame, sources)
 
     def test_preview_samples_match_padding(self):

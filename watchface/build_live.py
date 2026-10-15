@@ -464,14 +464,17 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
                 "distance": 13,
                 "ampm": 14,
             }.get(animation["source"], 0)
+            minimum, maximum = animation_range(animation)
             rows.append(
-                "{%d, %d, %d, %d, %d, animation_%d_frames, animation_%d_offsets}"
+                "{%d, %d, %d, %d, %d, %d, %d, animation_%d_frames, animation_%d_offsets}"
                 % (
                     animation["x"],
                     animation["y"],
                     animation["interval"],
                     len(animation["symbols"]),
                     source,
+                    minimum,
+                    maximum,
                     index,
                     index,
                 )
@@ -503,6 +506,20 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def animation_range(raw: dict) -> tuple[int, int]:
+    """Progress frames fill a visual range instead of wrapping as data rises."""
+    defaults = {"heart": 200, "steps": 10000, "calories": 1000, "distance": 10}
+    source = raw.get("source")
+    if source not in defaults:
+        return 0, 200
+    minimum, maximum = raw.get("min_value", 0), raw.get("max_value", defaults[source])
+    limit = 255 if source == "heart" else 99999
+    if type(minimum) is not int or type(maximum) is not int or not 0 <= minimum < maximum <= limit:
+        label = {"heart": "Heart rate", "steps": "Steps", "calories": "Calories", "distance": "Distance"}[source]
+        raise ValueError(f"{label} range must use whole numbers: 0 <= minimum < maximum <= {limit}")
+    return minimum, maximum
+
+
 def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, bytes, int]], list[dict]]:
     """Pack frame sequences as ordinary eZip images for lv_img_set_src."""
     images: list[tuple[str, bytes, int]] = []
@@ -511,6 +528,7 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
         source = str(raw.get("source", "loop"))
         if source not in ("static", "loop", "battery", "weekday", "day", "month", "second", "minute", "hour", "steps", "heart", "scaled", "calories", "distance", "ampm"):
             raise ValueError(f"Unknown animation mode: {source}")
+        minimum, maximum = animation_range(raw)
         frames = [Path(str(path)) for path in raw.get("frames", [])]
         if not 1 <= len(frames) <= 64:
             raise ValueError("An animation must have 1–64 frames")
@@ -560,6 +578,8 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
                 "y": int(raw["y"]),
                 "interval": max(200, min(10000, int(raw.get("interval", 1000)))),
                 "source": source,
+                "min_value": minimum,
+                "max_value": maximum,
                 "z_index": layer_index(raw, 0),
                 "symbols": symbols,
                 "offsets": offsets,

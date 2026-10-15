@@ -544,14 +544,39 @@ public partial class MainWindow : Window
             _selectedAnimation.Height = Clamp(height, 1, ScreenHeight);
         if (int.TryParse(AnimationIntervalBox.Text, out var interval))
             _selectedAnimation.Interval = Math.Clamp(interval, 200, 10000);
-        if (AnimationSourceBox.SelectedItem is AnimationChoice choice)
+        if (AnimationSourceBox.SelectedItem is AnimationChoice choice && choice.Key != _selectedAnimation.Source)
+        {
             _selectedAnimation.Source = choice.Key;
+            _filling = true;
+            AnimationMinBox.Text = "0";
+            AnimationMaxBox.Text = AnimationItem.DefaultMaximum(choice.Key).ToString();
+            _filling = false;
+        }
+        _selectedAnimation.MinValue = int.TryParse(AnimationMinBox.Text, out var minimum) ? minimum : -1;
+        _selectedAnimation.MaxValue = int.TryParse(AnimationMaxBox.Text, out var maximum) ? maximum : -1;
+        UpdateAnimationRangeControls();
         var label = AnimationNameBox.Text.Trim();
         if (!string.IsNullOrWhiteSpace(label))
             _selectedAnimation.Label = label;
         AnimationList.Items.Refresh();
         _savedBin = null;
         Redraw();
+    }
+
+    void UpdateAnimationRangeControls()
+    {
+        var animation = _selectedAnimation;
+        AnimationRangePanel.Visibility = animation?.UsesProgressRange == true ? Visibility.Visible : Visibility.Collapsed;
+        if (animation == null)
+            return;
+        var unit = animation.Source switch { "heart" => "BPM", "steps" => "steps", "calories" => "kcal", "distance" => "km/mi", _ => "" };
+        var sample = animation.Source switch { "heart" => "72 BPM", "steps" => "1234 steps", "calories" => "300 kcal", "distance" => "7 whole km/mi", _ => "" };
+        AnimationMinLabel.Text = $"Minimum ({unit})";
+        AnimationMaxLabel.Text = $"Maximum ({unit})";
+        AnimationRangeInfo.Text = $"Frames fill in order across this visual range. Values below/above it use the first/last frame. Live preview uses {sample}."
+            + (animation.Source == "heart" ? " No reading uses the first frame." : animation.Source == "distance" ? " Whole kilometers or miles, following the watch's unit setting." : "");
+        AnimationRangeError.Text = $"Enter whole numbers: 0 <= minimum < maximum <= {animation.RangeLimit}.";
+        AnimationRangeError.Visibility = animation.HasValidProgressRange ? Visibility.Collapsed : Visibility.Visible;
     }
 
     void RefreshAnimations(AnimationItem? selected = null)
@@ -581,6 +606,8 @@ public partial class MainWindow : Window
             AnimationWidthBox.Text = "";
             AnimationHeightBox.Text = "";
             AnimationIntervalBox.Text = "";
+            AnimationMinBox.Text = "";
+            AnimationMaxBox.Text = "";
             AnimationSourceBox.SelectedItem = null;
         }
         else
@@ -593,8 +620,11 @@ public partial class MainWindow : Window
             AnimationWidthBox.Text = animation.Width.ToString();
             AnimationHeightBox.Text = animation.Height.ToString();
             AnimationIntervalBox.Text = animation.Interval.ToString();
+            AnimationMinBox.Text = animation.MinValue.ToString();
+            AnimationMaxBox.Text = animation.MaxValue.ToString();
             AnimationSourceBox.SelectedItem = AnimationChoices.FirstOrDefault(item => item.Key == animation.Source);
         }
+        UpdateAnimationRangeControls();
         _filling = false;
         RefreshFrames();
     }
@@ -1493,6 +1523,8 @@ public partial class MainWindow : Window
                 Width = saved.Width > 0 ? saved.Width : previews[0].PixelWidth,
                 Height = saved.Height > 0 ? saved.Height : previews[0].PixelHeight,
                 Interval = Math.Clamp(saved.Interval, 200, 10000),
+                MinValue = saved.MinValue ?? 0,
+                MaxValue = saved.MaxValue ?? AnimationItem.DefaultMaximum(saved.Source == "scaled" ? "calories" : saved.Source),
                 Source = saved.Source == "scaled" ? "calories"
                     : AnimationChoices.Any(choice => choice.Key == saved.Source) ? saved.Source : "loop",
                 FrameOffsets = frames.Select((_, index) => index < saved.FrameOffsets.Count
@@ -1640,6 +1672,8 @@ public partial class MainWindow : Window
                     Width = animation.Width,
                     Height = animation.Height,
                     Interval = animation.Interval,
+                    MinValue = animation.MinValue,
+                    MaxValue = animation.MaxValue,
                     Source = animation.Source,
                 });
             }
@@ -1745,6 +1779,12 @@ public partial class MainWindow : Window
 
     async Task<bool> RunBuild(string output)
     {
+        var invalidRange = _animations.FirstOrDefault(item => item.UsesProgressRange && !item.HasValidProgressRange);
+        if (invalidRange != null)
+        {
+            Log($"{invalidRange.Label}: enter whole values with 0 <= minimum < maximum <= {invalidRange.RangeLimit}.", LogLevel.Error);
+            return false;
+        }
         EnsureBackground();
         var layout = Path.Combine(_workingFolder, "layout.json");
         var payload = new
@@ -1785,6 +1825,8 @@ public partial class MainWindow : Window
                 height = animation.Height,
                 interval = animation.Interval,
                 source = animation.Source,
+                min_value = animation.MinValue,
+                max_value = animation.MaxValue,
                 offsets = animation.Frames.Select((_, index) =>
                 {
                     var offset = animation.OffsetAt(index);
@@ -2208,6 +2250,24 @@ public sealed class AnimationItem
     public int Height { get; set; }
     public int Interval { get; set; } = 400;
     public string Source { get; set; } = "loop";
+    public int MinValue { get; set; } = 0;
+    int? _maxValue;
+    public int MaxValue { get => _maxValue ?? DefaultMaximum(Source); set => _maxValue = value; }
+    public static int DefaultMaximum(string source) => source switch { "steps" => 10000, "calories" => 1000, "distance" => 10, _ => 200 };
+    public bool UsesProgressRange => Source is "heart" or "steps" or "calories" or "distance";
+    public int RangeLimit => Source == "heart" ? 255 : 99999;
+    public bool HasValidProgressRange => MinValue >= 0 && MinValue < MaxValue && MaxValue <= RangeLimit;
+
+    public int ProgressFrameIndex(int value)
+    {
+        if (Previews.Count == 0)
+            return -1;
+        if (!HasValidProgressRange || value <= MinValue)
+            return 0;
+        if (value >= MaxValue)
+            return Previews.Count - 1;
+        return (value - MinValue) * Previews.Count / (MaxValue - MinValue + 1);
+    }
 
     public FrameOffset OffsetAt(int index)
     {
@@ -2220,6 +2280,8 @@ public sealed class AnimationItem
     {
         if (Previews.Count == 0)
             return -1;
+        if (UsesProgressRange)
+            return ProgressFrameIndex(Source switch { "steps" => 1234, "calories" => 300, "distance" => 7, _ => 72 });
         var now = DateTime.Now;
         var value = Source switch
         {
@@ -2231,10 +2293,6 @@ public sealed class AnimationItem
             "second" => now.Second,
             "minute" => now.Minute,
             "hour" => now.Hour % 12,
-            "steps" => 1234,
-            "heart" => 72,
-            "calories" => 300,
-            "distance" => 7,
             "ampm" => now.Hour < 12 ? 0 : 1,
             "scaled" => 3,
             _ => -1,
@@ -2280,6 +2338,8 @@ public sealed class SavedAnimation
     public int Height { get; set; }
     public int Interval { get; set; } = 400;
     public string Source { get; set; } = "loop";
+    public int? MinValue { get; set; }
+    public int? MaxValue { get; set; }
 }
 
 public sealed class SourceChoice

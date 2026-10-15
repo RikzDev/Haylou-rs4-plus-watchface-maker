@@ -119,6 +119,14 @@
                     <TextBlock Text="HEX color; applies to every frame. Original restores the source artwork." Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"/>
                     <TextBlock Text="Mode"/>
                     <ComboBox x:Name="AnimationSourceBox" Margin="0,4,0,8" SelectionChanged="AnimationChanged"/>
+                    <StackPanel x:Name="AnimationRangePanel" Visibility="Collapsed" Margin="0,0,0,8">
+                        <UniformGrid Columns="2">
+                            <StackPanel Margin="0,0,8,0"><TextBlock x:Name="AnimationMinLabel" Text="Minimum"/><TextBox x:Name="AnimationMinBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
+                            <StackPanel><TextBlock x:Name="AnimationMaxLabel" Text="Maximum"/><TextBox x:Name="AnimationMaxBox" Margin="0,4,0,0" TextChanged="AnimationChanged"/></StackPanel>
+                        </UniformGrid>
+                        <TextBlock x:Name="AnimationRangeInfo" Foreground="{StaticResource Muted}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        <TextBlock x:Name="AnimationRangeError" Foreground="#FFD54F" FontSize="11" TextWrapping="Wrap" Visibility="Collapsed"/>
+                    </StackPanel>
                     <TextBlock Text="Sequence preview"/>
                     <UniformGrid Columns="2" Margin="0,4,0,6">
                         <ComboBox x:Name="AnimationPreviewModeBox" Margin="0,0,4,0" SelectionChanged="AnimationPreviewModeChanged">
@@ -168,7 +176,7 @@
                         <Button x:Name="MoveFrameUpButton" Content="↑ Move up" Margin="0,4,4,0" Click="MoveFrameUpClick"/>
                         <Button x:Name="MoveFrameDownButton" Content="↓ Move down" Margin="4,4,0,0" Click="MoveFrameDownClick"/>
                     </UniformGrid>
-                    <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" Text="Battery uses 0-100%. Weekdays run Sunday-Saturday. AM/PM needs 2 frames (AM, PM), hidden on the watch in 24h mode. Distance uses whole km/mi; other numeric modes use value modulo frame count."/>
+                    <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" Text="Battery uses 0–100%. Heart rate, steps, calories and distance fill frames across the configured range. Distance uses whole km/mi. Weekdays run Sunday–Saturday. AM/PM needs 2 frames (AM, PM), hidden on the watch in 24h mode. Time and calendar sequences cycle by their value."/>
                 </StackPanel>
             </Border>
             <Border Background="{StaticResource Panel}" CornerRadius="12" Padding="14">

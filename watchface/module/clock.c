@@ -59,6 +59,8 @@ typedef struct {
     int interval;
     int count;
     int source;
+    int min_value;
+    int max_value;
     const img_dsc_t *const *frames;
     const int *offsets;
 } animation_def_t;
@@ -422,6 +424,20 @@ static void *place_still(void *parent, const img_dsc_t *src, int x, int y)
     return img;
 }
 
+#if ANIMATION_COUNT
+static unsigned progress_frame(unsigned value, const animation_def_t *def)
+{
+    if (value <= (unsigned)def->min_value || def->max_value <= def->min_value)
+        return 0;
+    if (value >= (unsigned)def->max_value)
+        return (unsigned)def->count - 1u;
+    /* Range validation bounds the product to 99999 * 64, even when the
+       firmware reading itself is larger than the configured maximum. */
+    return ((value - (unsigned)def->min_value) * (unsigned)def->count)
+        / (unsigned)(def->max_value - def->min_value + 1);
+}
+#endif
+
 static void update_animations(face_t *face, const clock_time_t *now, unsigned steps, unsigned scaled, int heart, int battery,
     unsigned calories, unsigned distance, int ampm)
 {
@@ -453,17 +469,17 @@ static void update_animations(face_t *face, const clock_time_t *now, unsigned st
         } else if (def->source == 7) {
             frame = (unsigned)(now->hour % 12u) % (unsigned)def->count;
         } else if (def->source == 8) {
-            frame = steps % (unsigned)def->count;
+            frame = progress_frame(steps, def);
         } else if (def->source == 9) {
-            frame = heart >= 0 ? (unsigned)heart % (unsigned)def->count : 0;
+            frame = heart >= 0 ? progress_frame((unsigned)heart, def) : 0;
         } else if (def->source == 10) {
             frame = scaled % (unsigned)def->count;
         } else if (def->source == 11) {
             frame = 0;
         } else if (def->source == 12) {
-            frame = calories % (unsigned)def->count;
+            frame = progress_frame(calories, def);
         } else if (def->source == 13) {
-            frame = (distance / 100u) % (unsigned)def->count;
+            frame = progress_frame(distance / 100u, def);
         } else if (def->source == 14) {
             frame = ampm > 0 ? 1u : 0u;
         } else {
