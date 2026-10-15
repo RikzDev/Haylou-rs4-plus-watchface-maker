@@ -168,7 +168,7 @@
                         <Button x:Name="MoveFrameUpButton" Content="↑ Move up" Margin="0,4,4,0" Click="MoveFrameUpClick"/>
                         <Button x:Name="MoveFrameDownButton" Content="↓ Move down" Margin="4,4,0,0" Click="MoveFrameDownClick"/>
                     </UniformGrid>
-                    <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" Text="Modes select a frame from the current data. Battery uses 0–100%; other modes use the value modulo the frame count. Weekdays run Sunday–Saturday."/>
+                    <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap" Text="Battery uses 0-100%. Weekdays run Sunday-Saturday. AM/PM needs 2 frames (AM, PM), hidden on the watch in 24h mode. Distance uses whole km/mi; other numeric modes use value modulo frame count."/>
                 </StackPanel>
             </Border>
             <Border Background="{StaticResource Panel}" CornerRadius="12" Padding="14">

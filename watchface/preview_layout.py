@@ -16,7 +16,7 @@ def preview_text(item, slots):
     if source in ("heart", "battery", "temperature") and text.startswith("--"):
         return "--"[:slots].ljust(slots)
     text = text[-slots:]
-    return text.rjust(slots, "0" if source in ("hour", "minute", "second", "month", "day") else " ")
+    return text.rjust(slots, "0" if source in ("hour", "minute", "second", "month", "day", "year") else " ")
 
 
 def render_preview(widgets, folder):

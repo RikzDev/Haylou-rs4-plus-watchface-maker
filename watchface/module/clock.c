@@ -14,8 +14,8 @@ typedef struct {
 
 typedef struct {
     unsigned raw0;
-    unsigned scaled;
-    unsigned raw8;
+    unsigned calories_milli;
+    unsigned distance_raw;
     unsigned steps;
     /* Only this prefix has been decoded. Official dial_284 gives the
        firmware a larger output area (sp+64 in a 92-byte frame). A 16-byte
@@ -161,6 +161,42 @@ extern void *const fw[];
 #define FW_WEATHER 31
 #define FW_UTC_LOCAL 32
 #define FW_UNIT 33
+#define FW_HIDDEN 34
+
+/* Official dial_54: today +4 is milli-kcal, +8 is distance in 1/100000
+   km, and +12 is steps. Bit 31 is metadata, not part of each value. */
+static unsigned calories_value(unsigned raw)
+{
+    raw &= 0x7fffffffu;
+    return raw <= 99999999u ? raw / 1000u : 99999u;
+}
+
+static const char *distance_unit(void)
+{
+#if HAS_DISTANCE
+    if (fw[FW_UNIT] && ((int (*)(void))fw[FW_UNIT])() == 2)
+        return "mi";
+#endif
+    return "km";
+}
+
+static unsigned distance_centi(unsigned raw)
+{
+#if HAS_DISTANCE
+    raw &= 0x7fffffffu;
+    if (distance_unit()[0] == 'm') {
+        /* Same 0.6214 conversion as dial_54, without overflowing its
+           32-bit multiply or importing a 64-bit division helper. */
+        unsigned whole = (raw / 100000u) * 6214u;
+        return whole / 100u + ((whole % 100u) * 100000u
+            + (raw % 100000u) * 6214u) / 10000000u;
+    }
+    return raw / 1000u;
+#else
+    (void)raw;
+    return 0;
+#endif
+}
 
 static void turn_hands(face_t *face, const clock_time_t *now);
 
@@ -285,7 +321,8 @@ static void paint_glyphs(face_t *face, int line, const char *text)
     }
 }
 
-static void update_glyphs(face_t *face, const clock_time_t *now, unsigned steps, unsigned scaled, int heart, int battery)
+static void update_glyphs(face_t *face, const clock_time_t *now, unsigned steps, unsigned scaled, int heart, int battery,
+    unsigned calories, unsigned distance, int ampm)
 {
     /* Fixed custom-font text accepts up to 12 characters plus NUL. */
     char text[13];
@@ -307,6 +344,9 @@ static void update_glyphs(face_t *face, const clock_time_t *now, unsigned steps,
         case SRC_DAY:
             write_u(text, glyph_lines[line].slots, now->day, 1);
             break;
+        case SRC_YEAR:
+            write_u(text, glyph_lines[line].slots, now->year, 1);
+            break;
         case SRC_WDAY:
             write_u(text, glyph_lines[line].slots, now->wday, 0);
             break;
@@ -315,6 +355,27 @@ static void update_glyphs(face_t *face, const clock_time_t *now, unsigned steps,
             break;
         case SRC_SCALED:
             write_u(text, glyph_lines[line].slots, scaled, 0);
+            break;
+        case SRC_CALORIES:
+            write_u(text, glyph_lines[line].slots, calories, 0);
+            break;
+        case SRC_DISTANCE: {
+            int slots = glyph_lines[line].slots;
+            write_u(text, slots - 3, distance / 100u, 0);
+            text[slots - 3] = '.';
+            text[slots - 2] = (char)('0' + (distance / 10u) % 10u);
+            text[slots - 1] = (char)('0' + distance % 10u);
+            text[slots] = 0;
+            break;
+        }
+        case SRC_DISTANCE_INT:
+            write_u(text, glyph_lines[line].slots, distance / 100u, 0);
+            break;
+        case SRC_DISTANCE_UNIT:
+            copy_text(text, glyph_lines[line].slots, distance_unit());
+            break;
+        case SRC_AMPM:
+            copy_text(text, glyph_lines[line].slots, ampm < 0 ? "" : ampm ? "PM" : "AM");
             break;
         case SRC_HEART:
             copy_text(text, glyph_lines[line].slots, heart < 0 ? "--" : "");
@@ -361,7 +422,8 @@ static void *place_still(void *parent, const img_dsc_t *src, int x, int y)
     return img;
 }
 
-static void update_animations(face_t *face, const clock_time_t *now, unsigned steps, unsigned scaled, int heart, int battery)
+static void update_animations(face_t *face, const clock_time_t *now, unsigned steps, unsigned scaled, int heart, int battery,
+    unsigned calories, unsigned distance, int ampm)
 {
 #if ANIMATION_COUNT
     int index;
@@ -371,6 +433,10 @@ static void update_animations(face_t *face, const clock_time_t *now, unsigned st
         unsigned period;
         if (def->count <= 0 || !face->animations[index].image)
             continue;
+#if HAS_AMPM_ANIMATION
+        if (def->source == 14 && fw[FW_HIDDEN])
+            ((void (*)(void *, int))fw[FW_HIDDEN])(face->animations[index].image, ampm < 0);
+#endif
         if (def->source == 1) {
             if (battery >= 0)
                 frame = ((unsigned)battery * (unsigned)def->count) / 101u;
@@ -394,6 +460,12 @@ static void update_animations(face_t *face, const clock_time_t *now, unsigned st
             frame = scaled % (unsigned)def->count;
         } else if (def->source == 11) {
             frame = 0;
+        } else if (def->source == 12) {
+            frame = calories % (unsigned)def->count;
+        } else if (def->source == 13) {
+            frame = (distance / 100u) % (unsigned)def->count;
+        } else if (def->source == 14) {
+            frame = ampm > 0 ? 1u : 0u;
         } else {
             period = (unsigned)(def->interval + 199) / 200u;
             if (period == 0)
@@ -421,6 +493,9 @@ static void update_animations(face_t *face, const clock_time_t *now, unsigned st
     (void)scaled;
     (void)heart;
     (void)battery;
+    (void)calories;
+    (void)distance;
+    (void)ampm;
 #endif
 }
 
@@ -456,6 +531,8 @@ static void tick(void *unused)
     hr_t hr;
     char text[16];
     unsigned steps;
+    unsigned calories, distance;
+    int ampm, twelve_hour;
     unsigned char pct;
     void *sync;
     (void)unused;
@@ -463,8 +540,8 @@ static void tick(void *unused)
        direct memset@plt call, which produces an unsupported JUMP_SLOT
        relocation in LS11 dial modules. */
     today.raw0 = 0;
-    today.scaled = 0;
-    today.raw8 = 0;
+    today.calories_milli = 0;
+    today.distance_raw = 0;
     today.steps = 0;
     hr.flags = 0;
     hr.bpm = 0;
@@ -478,7 +555,9 @@ static void tick(void *unused)
     update_weather(face, &now);
 #endif
     turn_hands(face, &now);
-    if (fw[FW_FORMAT] && ((int (*)(void))fw[FW_FORMAT])() == 2) {
+    twelve_hour = fw[FW_FORMAT] && ((int (*)(void))fw[FW_FORMAT])() == 2;
+    ampm = twelve_hour ? (now.hour >= 12 ? 1 : 0) : -1;
+    if (twelve_hour) {
         if (now.hour == 0 || now.hour == 12)
             now.hour = 12;
         else if (now.hour > 12)
@@ -492,23 +571,25 @@ static void tick(void *unused)
     steps = today.steps & 0x7fffffffu;
     if (steps > 99999u)
         steps = 99999u;
+    calories = calories_value(today.calories_milli);
+    distance = distance_centi(today.distance_raw);
     pct = sync ? ((unsigned char *)sync)[0x29] : 0;
     face->animation_ticks++;
     update_animations(
         face,
         &now,
         steps,
-        (today.scaled & 0x7fffffffu) / 1000u,
+        (today.calories_milli & 0x7fffffffu) / 1000u,
         ((hr.flags & 1u) && hr.bpm) ? (int)hr.bpm : -1,
-        sync ? (int)pct : -1);
+        sync ? (int)pct : -1, calories, distance, ampm);
 #if GLYPH_LINE_COUNT
     update_glyphs(
         face,
         &now,
         steps,
-        (today.scaled & 0x7fffffffu) / 1000u,
+        (today.calories_milli & 0x7fffffffu) / 1000u,
         ((hr.flags & 1u) && hr.bpm) ? (int)hr.bpm : -1,
-        sync ? (int)pct : -1);
+        sync ? (int)pct : -1, calories, distance, ampm);
 #endif
     if (LABEL_COUNT <= 0 || !fw[FW_SPRINTF] || !fw[FW_LABEL_TEXT])
         return;
@@ -534,6 +615,10 @@ static void tick(void *unused)
             ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%02d", now.day);
             set_text(face->labels[index], text);
             break;
+        case SRC_YEAR:
+            ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%04u", (unsigned)now.year);
+            set_text(face->labels[index], text);
+            break;
         case SRC_WDAY:
             ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%u", (unsigned)now.wday);
             set_text(face->labels[index], text);
@@ -557,8 +642,26 @@ static void tick(void *unused)
             set_text(face->labels[index], text);
             break;
         case SRC_SCALED:
-            ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%u", (today.scaled & 0x7fffffffu) / 1000u);
+            ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%u", (today.calories_milli & 0x7fffffffu) / 1000u);
             set_text(face->labels[index], text);
+            break;
+        case SRC_CALORIES:
+            ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%u", calories);
+            set_text(face->labels[index], text);
+            break;
+        case SRC_DISTANCE:
+            ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%u.%02u", distance / 100u, distance % 100u);
+            set_text(face->labels[index], text);
+            break;
+        case SRC_DISTANCE_INT:
+            ((int (*)(char *, const char *, ...))fw[FW_SPRINTF])(text, "%u", distance / 100u);
+            set_text(face->labels[index], text);
+            break;
+        case SRC_DISTANCE_UNIT:
+            set_text(face->labels[index], distance_unit());
+            break;
+        case SRC_AMPM:
+            set_text(face->labels[index], ampm < 0 ? "" : ampm ? "PM" : "AM");
             break;
 #if HAS_TEMPERATURE
         case SRC_TEMPERATURE:

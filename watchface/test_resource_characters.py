@@ -54,6 +54,14 @@ class CharacterImageTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "Missing character images.*9"):
                 prepare_glyphs([item], work)
 
+    def test_distance_generates_decimal_point_for_digit_only_font(self):
+        with tempfile.TemporaryDirectory() as folder:
+            work = Path(folder)
+            item = {**self.fixture(work), "source": "distance", "text": "7.50"}
+            _, info = prepare_glyphs([item], work)
+            self.assertEqual(info["lines"][0]["slots"], 8)
+            self.assertIsNotNone(Image.open(work / "g0_46.png").getbbox())
+
     def test_resized_hand_exports_real_dimensions(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "hand.png"

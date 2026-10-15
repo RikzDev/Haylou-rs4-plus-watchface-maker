@@ -37,6 +37,12 @@ SOURCES = {
     "battery": 9,
     "scaled": 10,
     "temperature": 11,
+    "calories": 12,
+    "distance": 13,
+    "ampm": 14,
+    "distance_unit": 15,
+    "year": 16,
+    "distance_int": 17,
 }
 
 sys.path.insert(0, str(HERE))
@@ -92,12 +98,18 @@ DYNAMIC_GLYPHS = {
     "second": (2, "0123456789"),
     "month": (2, "0123456789"),
     "day": (2, "0123456789"),
+    "year": (4, "0123456789"),
     "wday": (1, "0123456789"),
     "steps": (5, "0123456789"),
     "heart": (3, "0123456789-"),
     "battery": (3, "0123456789-"),
     "scaled": (5, "0123456789"),
     "temperature": (4, "0123456789-"),
+    "calories": (5, "0123456789"),
+    "distance": (8, "0123456789."),
+    "distance_int": (5, "0123456789"),
+    "ampm": (2, "APM"),
+    "distance_unit": (2, "kmi"),
 }
 
 
@@ -184,7 +196,7 @@ def prepare_glyph_rasters(widgets: list, work: Path) -> tuple[list[tuple[str, Pa
         character_images = {}
         if kind == "images":
             originals = {ch: Image.open(file).convert("RGBA") for ch, file in asset}
-            missing = set(ordered) - originals.keys() - {" ", "-"}
+            missing = set(ordered) - originals.keys() - {" ", "-", "."}
             if missing:
                 raise ValueError(f"Missing character images: {''.join(sorted(missing))}")
             largest = max(max(image.size) for image in originals.values())
@@ -218,6 +230,10 @@ def prepare_glyph_rasters(widgets: list, work: Path) -> tuple[list[tuple[str, Pa
                         (cell_w // 4, cell_h // 2, cell_w * 3 // 4, cell_h // 2),
                         fill=fill, width=max(1, cell_h // 12),
                     )
+                elif ch == ".":
+                    dot = max(1, cell_h // 10)
+                    ImageDraw.Draw(canvas).rectangle(
+                        (cell_w // 2, cell_h - dot, cell_w // 2 + dot - 1, cell_h - 1), fill=fill)
                 canvas.save(png)
             else:
                 render_glyph(font, size, fill, ch, (cell_w, cell_h), png)
@@ -340,7 +356,15 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
         "#define SRC_BATTERY 9",
         "#define SRC_SCALED 10",
         "#define SRC_TEMPERATURE 11",
+        "#define SRC_CALORIES 12",
+        "#define SRC_DISTANCE 13",
+        "#define SRC_AMPM 14",
+        "#define SRC_DISTANCE_UNIT 15",
+        "#define SRC_YEAR 16",
+        "#define SRC_DISTANCE_INT 17",
         f"#define HAS_TEMPERATURE {int(any(item.get('source') == 'temperature' for item in widgets))}",
+        f"#define HAS_DISTANCE {int(any(item.get('source') in ('distance', 'distance_int', 'distance_unit') for item in widgets) or any(item.get('source') == 'distance' for item in (animations or [])))}",
+        f"#define HAS_AMPM_ANIMATION {int(any(item.get('source') == 'ampm' for item in (animations or [])))}",
         "typedef struct {",
         "    int x;",
         "    int y;",
@@ -436,6 +460,9 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
                 "steps": 8,
                 "heart": 9,
                 "scaled": 10,
+                "calories": 12,
+                "distance": 13,
+                "ampm": 14,
             }.get(animation["source"], 0)
             rows.append(
                 "{%d, %d, %d, %d, %d, animation_%d_frames, animation_%d_offsets}"
@@ -482,11 +509,13 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
     result: list[dict] = []
     for index, raw in enumerate(animations):
         source = str(raw.get("source", "loop"))
-        if source not in ("static", "loop", "battery", "weekday", "day", "month", "second", "minute", "hour", "steps", "heart", "scaled"):
+        if source not in ("static", "loop", "battery", "weekday", "day", "month", "second", "minute", "hour", "steps", "heart", "scaled", "calories", "distance", "ampm"):
             raise ValueError(f"Unknown animation mode: {source}")
         frames = [Path(str(path)) for path in raw.get("frames", [])]
         if not 1 <= len(frames) <= 64:
             raise ValueError("An animation must have 1–64 frames")
+        if source == "ampm" and len(frames) != 2:
+            raise ValueError("AM/PM requires exactly two frames: AM first, PM second")
         raw_offsets = raw.get("offsets", [])
         offsets = []
         for frame_index in range(len(frames)):

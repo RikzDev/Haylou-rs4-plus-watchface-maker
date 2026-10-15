@@ -86,12 +86,17 @@ public partial class MainWindow : Window
         new("Second", "second"),
         new("Month", "month"),
         new("Day", "day"),
+        new("Year", "year"),
         new("Weekday", "wday"),
         new("Steps", "steps"),
+        new("Calories (kcal)", "calories"),
+        new("Distance (km/mi)", "distance"),
+        new("Distance (whole km/mi)", "distance_int"),
+        new("Distance unit (km/mi)", "distance_unit"),
+        new("AM/PM (12h mode)", "ampm"),
         new("Heart rate", "heart"),
         new("Battery", "battery"),
         new("Temperature (weather)", "temperature"),
-        new("Value ÷ 1000", "scaled"),
     };
 
     static readonly AnimationChoice[] AnimationChoices =
@@ -106,8 +111,10 @@ public partial class MainWindow : Window
         new("Minute", "minute"),
         new("Hour (12h)", "hour"),
         new("Steps", "steps"),
+        new("Calories (whole kcal)", "calories"),
+        new("Distance (whole km/mi)", "distance"),
+        new("AM/PM (2 frames: AM, PM)", "ampm"),
         new("Heart rate", "heart"),
-        new("Value ÷ 1000", "scaled"),
     };
 
     void FillAnimationSources()
@@ -217,15 +224,17 @@ public partial class MainWindow : Window
         {
             "hour" or "minute" or "second" or "month" or "day" => 2,
             "heart" or "battery" => 3,
-            "temperature" => 4,
-            "steps" or "scaled" => 5,
+            "temperature" or "year" => 4,
+            "steps" or "scaled" or "calories" or "distance_int" => 5,
+            "distance" => 8,
+            "ampm" or "distance_unit" => 2,
             "wday" => 1,
             _ => Math.Clamp(widget.Sample.Length, 1, 12),
         };
         var sample = widget.Sample;
         if (sample.Length > slots)
             sample = sample[^slots..];
-        sample = sample.PadLeft(slots, widget.Source is "hour" or "minute" or "second" or "month" or "day" ? '0' : ' ');
+        sample = sample.PadLeft(slots, widget.Source is "hour" or "minute" or "second" or "month" or "day" or "year" ? '0' : ' ');
         var canvas = new Canvas { Width = width + (slots - 1) * pitch, Height = height, IsHitTestVisible = false };
         for (var index = 0; index < slots; index++)
         {
@@ -247,6 +256,14 @@ public partial class MainWindow : Window
                 Canvas.SetLeft(dash, index * pitch + width / 4);
                 Canvas.SetTop(dash, height / 2);
                 canvas.Children.Add(dash);
+            }
+            else if (sample[index] == '.')
+            {
+                var dotSize = Math.Max(1, height / 10);
+                var dot = new Border { Background = Brush(widget.Color), Width = dotSize, Height = dotSize };
+                Canvas.SetLeft(dot, index * pitch + width / 2);
+                Canvas.SetTop(dot, height - dotSize);
+                canvas.Children.Add(dot);
             }
         }
         return canvas;
@@ -314,6 +331,12 @@ public partial class MainWindow : Window
             CharacterInfo.Text = images ? $"PNG characters: {_selected.CharacterImages.Count}. Original colors are preserved." : "Font text.";
             if (_selected.Source == "temperature")
                 CharacterInfo.Text += " Weather synchronized by the phone; uses the watch's °C/°F setting. No data: --.";
+            if (_selected.Source == "distance")
+                CharacterInfo.Text += " Two decimal places; follows the watch's km/mi setting.";
+            if (_selected.Source == "distance_int")
+                CharacterInfo.Text += " Whole km/mi only: 7.50 becomes 7. Follows the watch's unit setting.";
+            if (_selected.Source == "ampm")
+                CharacterInfo.Text += " AM before noon, PM from noon. Hidden when the watch uses 24-hour time.";
             CharacterSpacingBox.Text = _selected.CharacterSpacing.ToString();
             CharacterSpacingBox.IsEnabled = true;
             ColorBox.IsEnabled = !images;
@@ -383,6 +406,11 @@ public partial class MainWindow : Window
         if (_filling || _selected == null || FunctionBox.SelectedItem is not SourceChoice choice)
             return;
         _selected.Source = choice.Key;
+        if (choice.Key != "text")
+        {
+            _selected.Sample = SampleFor(choice.Key, _selected.Key);
+            ShowSelection();
+        }
         _savedBin = null;
         RefreshWidgetVisual();
     }
@@ -1139,6 +1167,7 @@ public partial class MainWindow : Window
                 {
                     "battery" or "batteryResource" => "battery",
                     "dayOfWeek" or "dayOfWeekResource" => "weekday",
+                    "amPm" or "amPM" or "ampm" or "amPmResource" or "ampmResource" when frames.Count == 2 => "ampm",
                     "weatherResource" or "connectionResource" => "static",
                     _ when frames.Count == 1 => "static",
                     _ => "loop",
@@ -1244,12 +1273,15 @@ public partial class MainWindow : Window
         "second" => "second",
         "month" => "month",
         "day" => "day",
+        "year" => "year",
         "dayOfWeek" => "wday",
         "step" => "steps",
         "heartRate" => "heart",
         "battery" => "battery",
         "weatherTemperature" => "temperature",
-        "distance" => "scaled",
+        "distance" => "distance",
+        "calorie" or "calories" => "calories",
+        "amPm" or "amPM" or "ampm" => "ampm",
         _ => "text",
     };
 
@@ -1260,8 +1292,14 @@ public partial class MainWindow : Window
         "second" => "56",
         "month" => "10",
         "day" => "12",
+        "year" => DateTime.Now.Year.ToString(),
         "wday" => "1",
         "steps" => "1234",
+        "calories" => "300",
+        "distance" => "7.50",
+        "distance_int" => "7",
+        "distance_unit" => "km",
+        "ampm" => DateTime.Now.Hour < 12 ? "AM" : "PM",
         "heart" => "72",
         "battery" => "15",
         "temperature" => "25",
@@ -1383,6 +1421,17 @@ public partial class MainWindow : Window
             widget.FontFile = DefaultFontPath;
             if (!string.IsNullOrWhiteSpace(saved.Source))
                 widget.Source = saved.Source;
+            if (saved.Key == "distance" && saved.Source == "scaled")
+            {
+                widget.Source = "distance";
+                widget.Sample = SampleFor("distance", saved.Key);
+                Log("Legacy distance field updated to the validated distance source.");
+            }
+            else if (saved.Source == "scaled")
+            {
+                widget.Source = "calories";
+                Log("Legacy calorie field updated to Calories (kcal).");
+            }
             if (!string.IsNullOrWhiteSpace(saved.Font))
             {
                 var fontPath = Path.Combine(Path.GetDirectoryName(path)!, saved.Font);
@@ -1444,7 +1493,8 @@ public partial class MainWindow : Window
                 Width = saved.Width > 0 ? saved.Width : previews[0].PixelWidth,
                 Height = saved.Height > 0 ? saved.Height : previews[0].PixelHeight,
                 Interval = Math.Clamp(saved.Interval, 200, 10000),
-                Source = AnimationChoices.Any(choice => choice.Key == saved.Source) ? saved.Source : "loop",
+                Source = saved.Source == "scaled" ? "calories"
+                    : AnimationChoices.Any(choice => choice.Key == saved.Source) ? saved.Source : "loop",
                 FrameOffsets = frames.Select((_, index) => index < saved.FrameOffsets.Count
                     ? saved.FrameOffsets[index]
                     : new FrameOffset()).ToList(),
@@ -2183,6 +2233,9 @@ public sealed class AnimationItem
             "hour" => now.Hour % 12,
             "steps" => 1234,
             "heart" => 72,
+            "calories" => 300,
+            "distance" => 7,
+            "ampm" => now.Hour < 12 ? 0 : 1,
             "scaled" => 3,
             _ => -1,
         };

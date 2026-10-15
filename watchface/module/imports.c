@@ -34,7 +34,12 @@ extern char lv_ext_set_locale[];
 #if HAS_TEMPERATURE
 extern char apph_cfg_weather_info_get[];
 extern char get_local_time_from_utc0timestamps[];
+#endif
+#if HAS_TEMPERATURE || HAS_DISTANCE
 extern char apph_cfg_unit_type_get[];
+#endif
+#if HAS_AMPM_ANIMATION
+extern char lv_obj_set_hidden[];
 #endif
 
 void *const fw[] = {
@@ -72,6 +77,16 @@ void *const fw[] = {
 #if HAS_TEMPERATURE
     apph_cfg_weather_info_get,
     get_local_time_from_utc0timestamps,
+#else
+    0,
+    0,
+#endif
+#if HAS_TEMPERATURE || HAS_DISTANCE
     apph_cfg_unit_type_get,
+#else
+    0,
+#endif
+#if HAS_AMPM_ANIMATION
+    lv_obj_set_hidden,
 #endif
 };
