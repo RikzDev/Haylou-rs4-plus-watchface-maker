@@ -67,7 +67,9 @@ Early custom-font code allocated only the decoded 16-byte activity prefix. An of
 
 The module now reserves 64 bytes for activity output and 8 bytes for heart-rate/SpO2 output. Fixed raster text has a 13-byte buffer for 12 characters plus a terminator, and bounded copying no longer advances past the source terminator. A module ABI marker lets preflight reject known older builds.
 
-The activity field currently called `scaled` is divided by 1000. Its complete semantics have not been established, even though the importer associates an original distance widget with it.
+Official dial 54 establishes the activity fields: milli-kcal at +4 (divide by 1000), distance at +8 (100000 units per km) and steps at +12. Bit 31 is excluded. Distance follows the watch's km/mi setting and displays two decimals. The old `scaled` source is retained for compatibility; new imports use named calorie and distance sources. AM/PM was decoded from dial 100 (Schedule to Keep, confirmed by its English translation table) and dial 272. The editor corrects the calendar face's noon/midnight edge cases. See [the activity and AM/PM analysis](../watchface/activity_time_analysis.md) for addresses, conversions and validation scope.
+
+Heart-rate, steps, calories and whole-distance frame sequences use configurable, clamped progress ranges. They no longer wrap as the value rises. The descriptor stores minimum/maximum values; selection uses inclusive buckets and caps values before multiplication. Battery retains its fixed percent scale and time/calendar selectors retain cyclic behavior. This changes the editor's own image selection rules, with no new firmware imports. See the activity analysis and runtime tests for defaults, bounds and local validation.
 
 ## Weather
 
