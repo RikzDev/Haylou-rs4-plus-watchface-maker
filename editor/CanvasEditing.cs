@@ -68,6 +68,7 @@ public partial class MainWindow
     void UpdateCanvasSelection()
     {
         RefreshLayers();
+        RefreshStudioSelection();
         var exists = _canvasTarget switch
         {
             Widget widget => _widgets.Contains(widget),

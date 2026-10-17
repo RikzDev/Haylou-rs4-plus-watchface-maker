@@ -55,6 +55,7 @@ public partial class MainWindow : Window
         Redraw();
         RefreshAnimations(null);
         ShowSelection();
+        InitializeStudioWorkspace();
     }
 
     void InitializeBlankProject()
@@ -651,8 +652,16 @@ public partial class MainWindow : Window
 
     void AnimationPlayClick(object sender, RoutedEventArgs e)
     {
+        if (_selectedAnimation == null || _layerBusy)
+            return;
+        if (_animationPreviewMode != "loop")
+        {
+            _animationTicks = Math.Max(0, PreviewFrameIndex(_selectedAnimation)) * Math.Max(1, (_selectedAnimation.Interval + 199) / 200);
+            _animationPreviewPlaying = true;
+        }
+        else
+            _animationPreviewPlaying = !_animationPreviewPlaying;
         _animationPreviewMode = "loop";
-        _animationPreviewPlaying = !_animationPreviewPlaying;
         _filling = true;
         AnimationPreviewModeBox.SelectedIndex = 1;
         _filling = false;
@@ -672,6 +681,7 @@ public partial class MainWindow : Window
         if (_selectedAnimation == null || _selectedAnimation.Frames.Count == 0)
             return;
         index = Math.Clamp(index, 0, _selectedAnimation.Frames.Count - 1);
+        _canvasTarget = _selectedAnimation;
         _animationPreviewMode = "frame";
         _animationPreviewPlaying = false;
         _filling = true;
@@ -720,6 +730,7 @@ public partial class MainWindow : Window
         }
         AnimationPlayButton.Content = _animationPreviewPlaying ? "Pause" : "Play";
         _filling = false;
+        RefreshStudioTimeline();
     }
 
     void ShowFrameOffset()
@@ -768,6 +779,8 @@ public partial class MainWindow : Window
                     Label = $"{index + 1:D2}",
                     FileName = Path.GetFileName(path),
                     Preview = _selectedAnimation.Previews[index],
+                    TimelineWidth = TimelineFrameWidth - 2,
+                    DurationLabel = _selectedAnimation.Source == "loop" ? $"{EffectiveFrameDuration(_selectedAnimation)} ms" : "state",
                 })
                 .ToList();
             var index = selected >= 0 ? selected : _selectedFrameIndex;
@@ -777,6 +790,7 @@ public partial class MainWindow : Window
         _filling = false;
         ShowFrameOffset();
         UpdatePreviewControls();
+        RefreshStudioTimeline(true);
     }
 
     void AddFramesToAnimationClick(object sender, RoutedEventArgs e)
@@ -835,21 +849,7 @@ public partial class MainWindow : Window
     {
         if (_selectedAnimation == null || _selectedFrameIndex < 0)
             return;
-        var target = _selectedFrameIndex + delta;
-        if (target < 0 || target >= _selectedAnimation.Frames.Count)
-            return;
-        (_selectedAnimation.Frames[_selectedFrameIndex], _selectedAnimation.Frames[target]) =
-            (_selectedAnimation.Frames[target], _selectedAnimation.Frames[_selectedFrameIndex]);
-        if (_selectedAnimation.OriginalFrames.Count > 0)
-            (_selectedAnimation.OriginalFrames[_selectedFrameIndex], _selectedAnimation.OriginalFrames[target]) =
-                (_selectedAnimation.OriginalFrames[target], _selectedAnimation.OriginalFrames[_selectedFrameIndex]);
-        (_selectedAnimation.Previews[_selectedFrameIndex], _selectedAnimation.Previews[target]) =
-            (_selectedAnimation.Previews[target], _selectedAnimation.Previews[_selectedFrameIndex]);
-        (_selectedAnimation.FrameOffsets[_selectedFrameIndex], _selectedAnimation.FrameOffsets[target]) =
-            (_selectedAnimation.FrameOffsets[target], _selectedAnimation.FrameOffsets[_selectedFrameIndex]);
-        _savedBin = null;
-        RefreshFrames(target);
-        Redraw();
+        ReorderTimelineFrame(_selectedFrameIndex, _selectedFrameIndex + delta);
     }
 
     void PreviewAnimations()
@@ -1942,6 +1942,7 @@ public partial class MainWindow : Window
         RemoveFrameButton.IsEnabled = !busy;
         MoveFrameUpButton.IsEnabled = !busy;
         MoveFrameDownButton.IsEnabled = !busy;
+        SetStudioBusy(busy);
     }
 
     int ReadId()
@@ -2316,6 +2317,8 @@ public sealed class FrameView
     public string Label { get; set; } = "";
     public string FileName { get; set; } = "";
     public BitmapSource? Preview { get; set; }
+    public double TimelineWidth { get; set; } = 94;
+    public string DurationLabel { get; set; } = "";
 }
 
 public sealed class FrameOffset

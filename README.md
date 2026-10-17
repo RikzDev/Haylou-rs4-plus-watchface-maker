@@ -13,6 +13,7 @@ Import a **TBWF watchface made for the standard Haylou RS4**, edit its images, t
 - [Features](#features)
 - [Compatibility](#compatibility)
 - [Installation](#installation)
+- [Studio workspace](#studio-workspace-design-branch)
 - [Getting started](#getting-started)
 - [Text, fonts and live data](#text-fonts-and-live-data)
 - [Images and animations](#images-and-animations)
@@ -165,6 +166,21 @@ After building, the executable is normally available at:
 ```text
 editor\bin\Debug\net9.0-windows\HaylouFaceEditor.exe
 ```
+
+## Studio workspace (design branch)
+
+The `design/studio-workspace` branch introduces an IDE-style editor with the existing warm dark palette. The visual plan is in [Studio workspace design](docs/design/studio-workspace.md).
+
+- Use **Project Explorer** on the left for layers, image/sequence assets and package settings.
+- Select an element in the explorer or canvas to open its **Inspector** on the right. Text, image/sequence and background properties have separate tabs.
+- Resize the panes with the vertical and horizontal splitters. **View > Reset panel layout** restores the defaults.
+- Use **Fit**, the zoom buttons or **Ctrl+mouse wheel** over the artboard; zoom does not change exported coordinates.
+- The bottom **Timeline** provides a track picker, frame filmstrip, ruler/playhead, transport and frame offsets. Click a frame or drag on the ruler to pause and inspect one frame. Drag a frame thumbnail to reorder it, preserving its original artwork and offsets. Use the scale slider to change the filmstrip width; long sequences scroll horizontally and follow a newly selected or playing frame.
+- **Live data** follows the existing watch-value mapping. **Play loop** inspects artwork as a timed sequence. Data-driven frames are labeled as states; loop inspection does not change their exported data source.
+- **Space** plays/pauses and **Left/Right**, **Home/End** select frames when focus is outside a text field or other value editor. **Ctrl+O**, **Ctrl+I**, **Ctrl+S** and **Ctrl+Shift+B** open, import, save and build.
+- **Output** is a separate bottom tab with the existing severity colors. Build and upload operations display their output and disable editing while running.
+
+Existing projects and the native watchface format remain compatible.
 
 ## Getting started
 
