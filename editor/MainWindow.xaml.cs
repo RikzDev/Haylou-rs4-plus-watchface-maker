@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     {
         Directory.CreateDirectory(_workingFolder);
         InitializeComponent();
+        InitializeWeatherIcons();
         ResetFonts();
         NameBox.TextChanged += (_, _) => _savedBin = null;
         TitleBox.TextChanged += (_, _) => _savedBin = null;
@@ -115,6 +116,7 @@ public partial class MainWindow : Window
         new("Calories (whole kcal)", "calories"),
         new("Distance (whole km/mi)", "distance"),
         new("AM/PM (2 frames: AM, PM)", "ampm"),
+        new("Weather (16 condition icons)", "weather"),
         new("Heart rate", "heart"),
     };
 
@@ -308,6 +310,7 @@ public partial class MainWindow : Window
         if (_selected == null)
         {
             SelectedName.Text = "none";
+            TextElementNameBox.Text = "";
             XBox.Text = "";
             YBox.Text = "";
             ColorBox.Text = "";
@@ -322,6 +325,7 @@ public partial class MainWindow : Window
         else
         {
             SelectedName.Text = _selected.Label;
+            TextElementNameBox.Text = _selected.Label;
             XBox.Text = _selected.X.ToString();
             YBox.Text = _selected.Y.ToString();
             ColorBox.Text = _selected.Color;
@@ -342,6 +346,25 @@ public partial class MainWindow : Window
             CharacterSpacingBox.IsEnabled = true;
             ColorBox.IsEnabled = !images;
         }
+        _filling = false;
+    }
+
+    void TextElementNameChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_filling || _selected == null || _layerBusy) return;
+        var name = TextElementNameBox.Text.Trim();
+        if (name.Length == 0) return;
+        _selected.Label = name;
+        SelectedName.Text = name;
+        _savedBin = null;
+        UpdateCanvasSelection();
+    }
+
+    void TextElementNameLostFocus(object sender, RoutedEventArgs e)
+    {
+        if (_selected == null) return;
+        _filling = true;
+        TextElementNameBox.Text = _selected.Label;
         _filling = false;
     }
 
@@ -556,6 +579,7 @@ public partial class MainWindow : Window
         _selectedAnimation.MinValue = int.TryParse(AnimationMinBox.Text, out var minimum) ? minimum : -1;
         _selectedAnimation.MaxValue = int.TryParse(AnimationMaxBox.Text, out var maximum) ? maximum : -1;
         UpdateAnimationRangeControls();
+        WeatherSequenceOptions.Visibility = _selectedAnimation.Source == "weather" ? Visibility.Visible : Visibility.Collapsed;
         var label = AnimationNameBox.Text.Trim();
         if (!string.IsNullOrWhiteSpace(label))
             _selectedAnimation.Label = label;
@@ -626,6 +650,7 @@ public partial class MainWindow : Window
             AnimationSourceBox.SelectedItem = AnimationChoices.FirstOrDefault(item => item.Key == animation.Source);
         }
         UpdateAnimationRangeControls();
+        WeatherSequenceOptions.Visibility = animation?.Source == "weather" ? Visibility.Visible : Visibility.Collapsed;
         _filling = false;
         RefreshFrames();
     }
@@ -777,7 +802,7 @@ public partial class MainWindow : Window
                 .Select((path, index) => new FrameView
                 {
                     Label = $"{index + 1:D2}",
-                    FileName = Path.GetFileName(path),
+                    FileName = _selectedAnimation.Source == "weather" && index < WeatherSlots.Length ? WeatherSlots[index].Label : Path.GetFileName(path),
                     Preview = _selectedAnimation.Previews[index],
                     TimelineWidth = TimelineFrameWidth - 2,
                     DurationLabel = _selectedAnimation.Source == "loop" ? $"{EffectiveFrameDuration(_selectedAnimation)} ms" : "state",
@@ -795,6 +820,7 @@ public partial class MainWindow : Window
 
     void AddFramesToAnimationClick(object sender, RoutedEventArgs e)
     {
+        if (_selectedAnimation?.Source == "weather") { Log("Use Weather icons to replace condition images. Weather frame order is fixed.", LogLevel.Warning); return; }
         if (_selectedAnimation == null)
         {
             AddAnimationClick(sender, e);
@@ -825,6 +851,7 @@ public partial class MainWindow : Window
 
     void RemoveFrameClick(object sender, RoutedEventArgs e)
     {
+        if (_selectedAnimation?.Source == "weather") return;
         if (_selectedAnimation == null || _selectedFrameIndex < 0)
             return;
         if (_selectedAnimation.Frames.Count <= 1)
@@ -1205,7 +1232,7 @@ public partial class MainWindow : Window
             });
             if (isIcon) SetAnimationTint(_animations[^1], ReadIconTint(element).ToString());
             if (frames.Count > 1 && property.Name is "weatherResource" or "connectionResource")
-                Log($"{property.Name}: all icon frames were imported as a fixed image. Automatic weather/connection state selection is not supported yet; inspect or reorder frames in the sequence editor.", LogLevel.Warning);
+                Log($"{property.Name}: all icon frames were imported as a fixed image. For automatic weather, use Weather icons to add a live condition element. Connection sets remain fixed; inspect their frames in the sequence editor.", LogLevel.Warning);
             Log($"Animation {property.Name}: {frames.Count} frames.");
         }
         return claimedImages;
@@ -1439,6 +1466,7 @@ public partial class MainWindow : Window
         }
         NameBox.Text = project.Name;
         TitleBox.Text = project.Title;
+        LoadWeatherIcons(project.WeatherIcons, path);
         _widgets.Clear();
         foreach (var saved in project.Widgets)
         {
@@ -1507,6 +1535,8 @@ public partial class MainWindow : Window
                 .Select(frame => Path.Combine(Path.GetDirectoryName(path)!, frame))
                 .Where(File.Exists)
                 .ToList();
+            if (saved.Source == "weather" && frames.Count != WeatherSlots.Length)
+                throw new InvalidDataException("A weather element requires all 16 condition icons.");
             if (frames.Count < 1)
                 continue;
             var previews = frames.Select(LoadBitmap).ToList();
@@ -1700,6 +1730,7 @@ public partial class MainWindow : Window
             Title = TitleBox.Text.Trim(),
             Background = pngName,
             BackgroundEdit = SaveBackgroundSettings(path),
+            WeatherIcons = SaveWeatherIcons(path),
             Animations = savedAnimations,
             Hands = savedHands,
             Fonts = savedFonts,
@@ -1783,6 +1814,12 @@ public partial class MainWindow : Window
         if (invalidRange != null)
         {
             Log($"{invalidRange.Label}: enter whole values with 0 <= minimum < maximum <= {invalidRange.RangeLimit}.", LogLevel.Error);
+            return false;
+        }
+        var invalidWeather = _animations.FirstOrDefault(item => item.Source == "weather" && item.Frames.Count != WeatherSlots.Length);
+        if (invalidWeather != null)
+        {
+            Log($"{invalidWeather.Label}: weather requires 16 condition slots. Use Weather icons to apply the complete set.", LogLevel.Error);
             return false;
         }
         EnsureBackground();
@@ -2100,7 +2137,7 @@ public partial class MainWindow : Window
         return CopyPixels(bitmap);
     }
 
-    static BitmapSource LoadBitmap(string path)
+    internal static BitmapSource LoadBitmap(string path)
     {
         var bitmap = new BitmapImage();
         bitmap.BeginInit();
@@ -2173,6 +2210,7 @@ public sealed class ProjectFile
     public string Title { get; set; } = "";
     public string Background { get; set; } = "";
     public SavedBackground? BackgroundEdit { get; set; }
+    public SavedWeatherIconSet? WeatherIcons { get; set; }
     public List<SavedWidget> Widgets { get; set; } = new();
     public List<SavedAnimation> Animations { get; set; } = new();
     public List<SavedHand> Hands { get; set; } = new();
@@ -2295,6 +2333,7 @@ public sealed class AnimationItem
             "minute" => now.Minute,
             "hour" => now.Hour % 12,
             "ampm" => now.Hour < 12 ? 0 : 1,
+            "weather" => 1,
             "scaled" => 3,
             _ => -1,
         };

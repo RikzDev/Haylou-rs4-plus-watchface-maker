@@ -16,6 +16,7 @@ rea/
 *-fonts/
 *-characters/
 *-frames/
+*-weather/
 *.apk
 *.idsig
 *.pcap

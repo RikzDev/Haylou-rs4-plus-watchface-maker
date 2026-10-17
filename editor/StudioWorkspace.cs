@@ -180,7 +180,7 @@ public partial class MainWindow
             TimelineCursorCanvas.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
         }
         bool available = count > 0 && !_layerBusy;
-        bool editableFrames = available;
+        bool editableFrames = available && animation?.Source != "weather";
         TimelineFirstButton.IsEnabled = TimelinePreviousButton.IsEnabled = TimelineNextButton.IsEnabled = available;
         AnimationPlayButton.IsEnabled = TimelineRestartButton.IsEnabled = available && count > 1;
         AnimationPreviewModeBox.IsEnabled = AnimationFrameSlider.IsEnabled = TimelineScaleSlider.IsEnabled = available;
@@ -274,7 +274,7 @@ public partial class MainWindow
     ListBoxItem? FrameContainer(DependencyObject? source) => source == null ? null : ItemsControl.ContainerFromElement(FrameList, source) as ListBoxItem;
     void TimelineFrameMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton != MouseButtonState.Pressed || _frameDragIndex < 0 || _layerBusy || !ReferenceEquals(_frameDragOwner, _selectedAnimation)) return;
+        if (e.LeftButton != MouseButtonState.Pressed || _frameDragIndex < 0 || _layerBusy || _selectedAnimation?.Source == "weather" || !ReferenceEquals(_frameDragOwner, _selectedAnimation)) return;
         var delta = e.GetPosition(FrameList) - _frameDragStart;
         if (Math.Abs(delta.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(delta.Y) < SystemParameters.MinimumVerticalDragDistance) return;
         var payload = new StudioFrameDrag(_frameDragOwner!, _frameDragIndex);
@@ -284,7 +284,7 @@ public partial class MainWindow
     }
     void TimelineFrameDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = !_layerBusy && e.Data.GetData("Haylou.Studio.Frame") is StudioFrameDrag drag && ReferenceEquals(drag.Animation, _selectedAnimation)
+        e.Effects = !_layerBusy && _selectedAnimation?.Source != "weather" && e.Data.GetData("Haylou.Studio.Frame") is StudioFrameDrag drag && ReferenceEquals(drag.Animation, _selectedAnimation)
             ? DragDropEffects.Move : DragDropEffects.None;
         e.Handled = true;
     }
@@ -301,7 +301,7 @@ public partial class MainWindow
     void ReorderTimelineFrame(int from, int to)
     {
         var animation = _selectedAnimation;
-        if (_layerBusy || animation == null || from < 0 || to < 0 || from >= animation.Frames.Count || to >= animation.Frames.Count || from == to) return;
+        if (_layerBusy || animation == null || animation.Source == "weather" || from < 0 || to < 0 || from >= animation.Frames.Count || to >= animation.Frames.Count || from == to) return;
         animation.OffsetAt(animation.Frames.Count - 1);
         static void Move<T>(List<T> list, int from, int to) { var item = list[from]; list.RemoveAt(from); list.Insert(to, item); }
         Move(animation.Frames, from, to); Move(animation.Previews, from, to); Move(animation.FrameOffsets, from, to);

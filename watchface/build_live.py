@@ -363,6 +363,7 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
         "#define SRC_YEAR 16",
         "#define SRC_DISTANCE_INT 17",
         f"#define HAS_TEMPERATURE {int(any(item.get('source') == 'temperature' for item in widgets))}",
+        f"#define HAS_WEATHER {int(any(item.get('source') == 'weather' for item in (animations or [])))}",
         f"#define HAS_DISTANCE {int(any(item.get('source') in ('distance', 'distance_int', 'distance_unit') for item in widgets) or any(item.get('source') == 'distance' for item in (animations or [])))}",
         f"#define HAS_AMPM_ANIMATION {int(any(item.get('source') == 'ampm' for item in (animations or [])))}",
         "typedef struct {",
@@ -463,6 +464,7 @@ def write_layout(path: Path, face: str, title: str, widgets: list, hands: list, 
                 "calories": 12,
                 "distance": 13,
                 "ampm": 14,
+                "weather": 15,
             }.get(animation["source"], 0)
             minimum, maximum = animation_range(animation)
             rows.append(
@@ -526,7 +528,7 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
     result: list[dict] = []
     for index, raw in enumerate(animations):
         source = str(raw.get("source", "loop"))
-        if source not in ("static", "loop", "battery", "weekday", "day", "month", "second", "minute", "hour", "steps", "heart", "scaled", "calories", "distance", "ampm"):
+        if source not in ("static", "loop", "battery", "weekday", "day", "month", "second", "minute", "hour", "steps", "heart", "scaled", "calories", "distance", "ampm", "weather"):
             raise ValueError(f"Unknown animation mode: {source}")
         minimum, maximum = animation_range(raw)
         frames = [Path(str(path)) for path in raw.get("frames", [])]
@@ -534,6 +536,8 @@ def prepare_animations(animations: list, work: Path) -> tuple[list[tuple[str, by
             raise ValueError("An animation must have 1–64 frames")
         if source == "ampm" and len(frames) != 2:
             raise ValueError("AM/PM requires exactly two frames: AM first, PM second")
+        if source == "weather" and len(frames) != 16:
+            raise ValueError("Weather requires exactly 16 condition icons in the Weather icons panel order")
         raw_offsets = raw.get("offsets", [])
         offsets = []
         for frame_index in range(len(frames)):

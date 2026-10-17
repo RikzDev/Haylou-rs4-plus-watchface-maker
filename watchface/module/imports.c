@@ -31,7 +31,7 @@ extern char lv_ext_res_mng_builtin_destroy[];
 extern char lv_i18n_lang_pack[];
 extern char lv_ext_get_locale[];
 extern char lv_ext_set_locale[];
-#if HAS_TEMPERATURE
+#if HAS_TEMPERATURE || HAS_WEATHER
 extern char apph_cfg_weather_info_get[];
 extern char get_local_time_from_utc0timestamps[];
 #endif
@@ -74,7 +74,7 @@ void *const fw[] = {
     lv_i18n_lang_pack,
     lv_ext_get_locale,
     lv_ext_set_locale,
-#if HAS_TEMPERATURE
+#if HAS_TEMPERATURE || HAS_WEATHER
     apph_cfg_weather_info_get,
     get_local_time_from_utc0timestamps,
 #else

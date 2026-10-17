@@ -99,10 +99,13 @@ typedef struct {
     animation_state_t animations[ANIMATION_COUNT > 0 ? ANIMATION_COUNT : 1];
     unsigned animation_ticks;
     void *task;
-#if HAS_TEMPERATURE
+#if HAS_TEMPERATURE || HAS_WEATHER
     unsigned weather_key;
     int temperature_c;
     int temperature_valid;
+#if HAS_WEATHER
+    int weather_condition;
+#endif
 #endif
 } face_t;
 
@@ -202,7 +205,7 @@ static unsigned distance_centi(unsigned raw)
 
 static void turn_hands(face_t *face, const clock_time_t *now);
 
-#if HAS_TEMPERATURE
+#if HAS_TEMPERATURE || HAS_WEATHER
 static void update_weather(face_t *face, const clock_time_t *now)
 {
     /* Official dials 77/100 leave 340 bytes for seven 48-byte records.
@@ -214,6 +217,9 @@ static void update_weather(face_t *face, const clock_time_t *now)
     if (face->weather_key == key)
         return;
     face->temperature_valid = 0;
+#if HAS_WEATHER
+    face->weather_condition = 0;
+#endif
     if (!fw[FW_WEATHER] || !fw[FW_UTC_LOCAL] || !fw[FW_MALLOC] || !fw[FW_FREE])
         return;
     weather = ((void *(*)(unsigned))fw[FW_MALLOC])(384);
@@ -237,12 +243,18 @@ static void update_weather(face_t *face, const clock_time_t *now)
         if (date->year == now->year && date->month == now->month && date->day == now->day) {
             face->temperature_c = (short)((unsigned)record[8] | ((unsigned)record[9] << 8));
             face->temperature_valid = 1;
+#if HAS_WEATHER
+            face->weather_condition = record[1];
+#endif
             break;
         }
     }
     ((void (*)(void *))fw[FW_FREE])(weather);
 }
 
+#endif
+
+#if HAS_TEMPERATURE
 static int temperature_value(const face_t *face)
 {
     int value = face->temperature_c;
@@ -250,6 +262,23 @@ static int temperature_value(const face_t *face)
         value = (value * 9) / 5 + 32;
     /* Four cells fit a sign plus three digits, or four positive digits. */
     return value < -999 ? -999 : value > 9999 ? 9999 : value;
+}
+#endif
+
+#if HAS_WEATHER
+static int weather_frame_index(const face_t *face, const clock_time_t *now)
+{
+    /* Official dial_77: condition byte +1, codes 1..12. Its day branch
+       is inclusive 06:00..18:59; other hours use three night variants. */
+    int condition = face->weather_condition;
+    if (condition < 1 || condition > 12)
+        return 0;
+    if (now->hour < 6 || now->hour > 18) {
+        if (condition == 1) return 13;
+        if (condition == 2) return 14;
+        if (condition == 4) return 15;
+    }
+    return condition;
 }
 #endif
 
@@ -439,7 +468,7 @@ static unsigned progress_frame(unsigned value, const animation_def_t *def)
 #endif
 
 static void update_animations(face_t *face, const clock_time_t *now, unsigned steps, unsigned scaled, int heart, int battery,
-    unsigned calories, unsigned distance, int ampm)
+    unsigned calories, unsigned distance, int ampm, int weather)
 {
 #if ANIMATION_COUNT
     int index;
@@ -482,6 +511,8 @@ static void update_animations(face_t *face, const clock_time_t *now, unsigned st
             frame = progress_frame(distance / 100u, def);
         } else if (def->source == 14) {
             frame = ampm > 0 ? 1u : 0u;
+        } else if (def->source == 15) {
+            frame = (unsigned)weather;
         } else {
             period = (unsigned)(def->interval + 199) / 200u;
             if (period == 0)
@@ -512,6 +543,7 @@ static void update_animations(face_t *face, const clock_time_t *now, unsigned st
     (void)calories;
     (void)distance;
     (void)ampm;
+    (void)weather;
 #endif
 }
 
@@ -549,6 +581,7 @@ static void tick(void *unused)
     unsigned steps;
     unsigned calories, distance;
     int ampm, twelve_hour;
+    int weather = 0;
     unsigned char pct;
     void *sync;
     (void)unused;
@@ -567,8 +600,11 @@ static void tick(void *unused)
     if (!face)
         return;
     ((void (*)(clock_time_t *))fw[FW_GET_TIME])(&now);
-#if HAS_TEMPERATURE
+#if HAS_TEMPERATURE || HAS_WEATHER
     update_weather(face, &now);
+#endif
+#if HAS_WEATHER
+    weather = weather_frame_index(face, &now);
 #endif
     turn_hands(face, &now);
     twelve_hour = fw[FW_FORMAT] && ((int (*)(void))fw[FW_FORMAT])() == 2;
@@ -597,7 +633,7 @@ static void tick(void *unused)
         steps,
         (today.calories_milli & 0x7fffffffu) / 1000u,
         ((hr.flags & 1u) && hr.bpm) ? (int)hr.bpm : -1,
-        sync ? (int)pct : -1, calories, distance, ampm);
+        sync ? (int)pct : -1, calories, distance, ampm, weather);
 #if GLYPH_LINE_COUNT
     update_glyphs(
         face,
@@ -760,7 +796,7 @@ static int face_init(void *parent)
         return 0;
     face->task = 0;
     face->background = 0;
-#if HAS_TEMPERATURE
+#if HAS_TEMPERATURE || HAS_WEATHER
     face->weather_key = (unsigned)-1;
     face->temperature_c = 0;
     face->temperature_valid = 0;

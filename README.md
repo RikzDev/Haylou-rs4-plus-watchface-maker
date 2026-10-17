@@ -290,7 +290,21 @@ Vector icons and animation lists are converted into editable PNG frames with the
 
 Select an icon or image in **Image sequences**, then use **Icon / image color**. Choose a palette swatch or enter `#RRGGBB`; `#AARRGGBB` also controls opacity. The chosen color applies to every frame, updates the preview and is written into the PNGs exported to the watch. Click **Original** to restore the source artwork. Original frames and the selected color are saved with the project, so you can change or restore the color after reopening it without accumulating opacity changes. This also works with older saved projects and ordinary imported images.
 
-Battery resources use battery-driven selection. Weather and Bluetooth connection icon sets are imported with all their frames in **Fixed image** mode: automatic weather-condition and connection-state selection is not implemented yet. Use **Single frame** to inspect them or reorder the desired image to the first position for a fixed display. Imported PNGs are saved with the project, so reopening it and generating a `.bin` no longer require the APK.
+Battery resources use battery-driven selection. Raw TBWF/library weather and Bluetooth connection sets are imported with all their frames in **Fixed image** mode. Use **Weather icons** for live weather with the validated native condition order; automatic Bluetooth connection selection remains unsupported. Use **Single frame** to inspect them or reorder the desired image to the first position for a fixed display. Imported PNGs are saved with the project, so reopening it and generating a `.bin` no longer require the APK.
+
+### Live weather icons and personal defaults
+
+Click **Weather icons** in the toolbar or **Add > Weather icons**. Choose **Filled** or **Outline** artwork, then **Apply and add weather** to create a live weather element. The watch selects today's synchronized forecast and switches between day and night variants for clear sky, partly cloudy sky and showers. Day is 06:00-18:59; night is 19:00-05:59. Missing forecasts and unknown condition codes use **No data / unknown**.
+
+Use **Replace...** beside any condition to load a PNG, JPG or BMP. Transparent PNGs are supported; images are fitted without stretching. **Reset** restores one icon, and **Reset all to built-in** restores the whole set. **Apply to project** updates existing weather elements while preserving placement, size, z-index, frame offsets and tint. Use **Original** in the image inspector if you want the replacement's original colors instead of an existing tint.
+
+Check **Use these icons as my defaults for new projects** to store your set locally. Each saved project keeps its own settings and custom images in a companion `*-weather` folder. Copy that folder together with the project and its other asset folders. Preferences are stored under `%LOCALAPPDATA%/HaylouFaceEditor/weather-icons/`.
+
+Weather has 16 fixed condition slots. Use **Single frame** or timeline scrubbing to inspect them; add, remove and reorder are disabled to preserve the firmware mapping. An arbitrary 18-frame TBWF weather sequence uses a different order and is not converted automatically. The live editor preview shows clear daytime weather; the watch uses its actual synchronized data. See the [native mapping and validation](watchface/weather_icons_analysis.md).
+
+### Text element names
+
+Select a text element and edit **Element name** in the text inspector. The name is saved with the project and shown in Layers. It is independent of the rendered text, selected data source and font; use the text content field to change what the watch displays.
 
 ### Progress sequences: heart rate, steps, calories and distance
 

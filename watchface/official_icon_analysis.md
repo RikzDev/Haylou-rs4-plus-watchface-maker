@@ -39,7 +39,7 @@ A dedicated built-in thermometer-drawing API was not found in this collection. T
 
 - Steps and heart icons can be ordinary fixed PNG images next to their live numeric text. The current editor's fixed-image support already provides positioning and resizing for this approach.
 - Progress-ring artwork can use multiple image states with an appropriate selection rule. Resource names alone do not establish each face's full index mapping.
-- An automatic weather icon needs a weather-condition image selector and a validated condition-to-artwork mapping, including no-data and applicable day/night variants. The editor's numeric `temperature` source does not currently provide that selector.
+- An automatic weather icon needs a weather-condition image selector and a validated condition-to-artwork mapping, including no-data and applicable day/night variants. The editor now provides a separate `weather` image source using the [validated 16-slot mapping](weather_icons_analysis.md); numeric `temperature` remains independent.
 - Original or appropriately licensed icon artwork can use the existing resource builder and `place_still`/image-source path. A new specialized firmware drawing import is not necessary for the demonstrated approach.
 
 The decoded examples remain local; original official artwork was not added to the published source repository.

@@ -1,0 +1,61 @@
+<Window x:Class="HaylouFaceEditor.WeatherIconsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Weather icons" Width="900" Height="780" MinWidth="760" MinHeight="620"
+        WindowStartupLocation="CenterOwner" Background="{StaticResource Paper}" Foreground="{StaticResource Ink}" FontFamily="Segoe UI" FontSize="12">
+    <Grid Margin="20">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel Margin="0,0,0,16">
+            <TextBlock Text="Weather icons" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock Text="Choose an image for each condition. Weather elements switch automatically using the watch's synchronized forecast." Style="{StaticResource StudioHelp}" Margin="0,5,0,0"/>
+        </StackPanel>
+        <DockPanel Grid.Row="1" Margin="0,0,0,12">
+            <Button Content="Reset all to built-in" DockPanel.Dock="Right" Click="ResetAllClick" Style="{StaticResource StudioToolButton}"/>
+            <TextBlock Text="Default artwork" Foreground="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <ComboBox x:Name="StyleBox" Width="130" HorizontalAlignment="Left" SelectionChanged="DefaultStyleChanged"><ComboBoxItem Tag="fill" Content="Filled"/><ComboBoxItem Tag="outline" Content="Outline"/></ComboBox>
+        </DockPanel>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="238"/></Grid.ColumnDefinitions>
+            <ListBox x:Name="IconList" ScrollViewer.HorizontalScrollBarVisibility="Disabled" Margin="0,0,14,0">
+                <ListBox.ItemTemplate><DataTemplate>
+                    <Grid Margin="0,3">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="54"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <Image Source="{Binding Preview}" Width="44" Height="44" Stretch="Uniform"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0">
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding Origin}" FontSize="10" Foreground="{StaticResource Muted}" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Replace..." Click="ReplaceIconClick" Style="{StaticResource StudioSmallButton}" ToolTip="Use your PNG/JPG/BMP image for this weather condition"/>
+                            <Button Content="Reset" Click="ResetIconClick" Style="{StaticResource StudioSmallButton}" Margin="4,0,0,0" ToolTip="Restore this condition's built-in artwork"/>
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <Border Grid.Column="1" Background="{StaticResource Panel}" Padding="16" CornerRadius="4">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <TextBlock Text="SELECTED CONDITION" Style="{StaticResource StudioPaneTitle}"/>
+                    <Border Background="{StaticResource Paper}" CornerRadius="3" Margin="0,12" Height="158"><Image Source="{Binding SelectedItem.Preview, ElementName=IconList}" Width="128" Height="128" Stretch="Uniform"/></Border>
+                    <TextBlock Text="{Binding SelectedItem.Label, ElementName=IconList}" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding SelectedItem.Origin, ElementName=IconList}" Foreground="{StaticResource Muted}" Margin="0,6,0,14"/>
+                    <TextBlock Text="Transparent images are supported. Your image is fitted without stretching. Position and size are controlled on the canvas." Style="{StaticResource StudioHelp}"/>
+                    <TextBlock Text="The no-data icon is used when weather is missing or the condition is unknown. Day: 06:00-18:59; night: 19:00-05:59." Style="{StaticResource StudioHelp}" Margin="0,12,0,0"/>
+                    <TextBlock Text="Apply updates weather elements in this project. Existing placement, alignment and image tint are preserved." Style="{StaticResource StudioHelp}" Margin="0,12,0,0"/>
+                    <TextBlock x:Name="IconCountText" Foreground="{StaticResource Accent}" Margin="0,16,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+        <StackPanel Grid.Row="3" Margin="0,16,0,0">
+            <CheckBox x:Name="RememberDefaultsBox" Content="Use these icons as my defaults for new projects" Foreground="{StaticResource Ink}" Margin="0,0,0,12"/>
+            <DockPanel>
+                <Button Content="Cancel" IsCancel="True" DockPanel.Dock="Left" Style="{StaticResource StudioToolButton}"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Apply to project" Click="ApplyClick" Style="{StaticResource StudioToolButton}" Margin="0,0,8,0"/>
+                    <Button Content="Apply and add weather" Click="ApplyAndAddClick" Style="{StaticResource StudioAccentButton}"/>
+                </StackPanel>
+            </DockPanel>
+        </StackPanel>
+    </Grid>
+</Window>

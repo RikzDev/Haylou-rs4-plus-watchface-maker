@@ -169,6 +169,7 @@ def exercise_tick(package_path, today_size=28, heart_size=4, iterations=3, initi
             for index, record in enumerate(weather_records or []):
                 if index >= 7:
                     break
+                payload[index * 48 + 1] = record.get("condition", 0)
                 struct.pack_into("<h", payload, index * 48 + 8, record["temperature"])
                 struct.pack_into("<I", payload, index * 48 + 12, record["timestamp"])
             cpu.mem_write(arg0, bytes(payload))

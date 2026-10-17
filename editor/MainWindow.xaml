@@ -23,6 +23,7 @@
                         <MenuItem Header="Fixed image..." Click="AddStaticImageClick" />
                         <MenuItem Header="Image sequence..." Click="AddAnimationClick" />
                         <MenuItem Header="Built-in icons..." Click="OpenIconLibraryClick" />
+                        <MenuItem Header="Weather icons..." Click="OpenWeatherIconsClick" />
                     </MenuItem>
                     <MenuItem Header="_View">
                         <MenuItem Header="Fit artboard" Click="FitArtboardClick" />
@@ -55,6 +56,7 @@
                     <Button Content="+ Image" Style="{StaticResource StudioToolButton}" Click="AddStaticImageClick" Margin="4,0,0,0" />
                     <Button Content="+ Sequence" Style="{StaticResource StudioToolButton}" Click="AddAnimationClick" Margin="4,0,0,0" />
                     <Button x:Name="IconLibraryButton" Content="Icon library" Style="{StaticResource StudioToolButton}" Click="OpenIconLibraryClick" Margin="4,0,0,0" />
+                    <Button x:Name="WeatherIconsButton" Content="Weather icons" Style="{StaticResource StudioToolButton}" Click="OpenWeatherIconsClick" Margin="4,0,0,0" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -215,9 +217,11 @@
                                         <DockPanel Margin="0,0,0,12">
                                             <StackPanel DockPanel.Dock="Left">
                                                 <TextBlock Text="ELEMENT EDITOR" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Accent}" />
-                                                <TextBlock x:Name="SelectedName" FontSize="18" FontWeight="SemiBold" Text="No element selected" Margin="0,3,0,0" />
+                                                <TextBlock x:Name="SelectedName" FontSize="18" FontWeight="SemiBold" Text="No element selected" TextTrimming="CharacterEllipsis" MaxWidth="270" Margin="0,3,0,0" />
                                             </StackPanel>
                                         </DockPanel>
+                                        <TextBlock Text="Element name" Style="{StaticResource StudioFieldLabel}" />
+                                        <TextBox x:Name="TextElementNameBox" MaxLength="80" TextChanged="TextElementNameChanged" LostFocus="TextElementNameLostFocus" Margin="0,4,0,12" ToolTip="Changes the name in Layers. The displayed text and data source stay unchanged." />
                                         <Border Background="#1B1916" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="3" Padding="10" Margin="0,0,0,8">
                                             <StackPanel>
                                                 <TextBlock Text="DATA SOURCE" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Margin="0,0,0,6" />
@@ -309,6 +313,10 @@
                                         <StackPanel Margin="0,10,0,0">
                                             <TextBlock Text="Mode" Style="{StaticResource StudioFieldLabel}" />
                                             <ComboBox x:Name="AnimationSourceBox" SelectionChanged="AnimationChanged" Margin="0,4,0,12" />
+                                            <StackPanel x:Name="WeatherSequenceOptions" Visibility="Collapsed" Margin="0,0,0,12">
+                                                <Button Content="Edit weather icons..." Click="OpenWeatherIconsClick" Style="{StaticResource StudioToolButton}" />
+                                                <TextBlock Text="16 fixed condition slots. Uses phone-synchronized weather; no data selects the fallback icon. Replace icons in the weather panel." Style="{StaticResource StudioHelp}" Margin="0,5,0,0" />
+                                            </StackPanel>
                                             <StackPanel x:Name="AnimationRangePanel" Visibility="Collapsed" Margin="0,0,0,12">
                                                 <UniformGrid Columns="2">
                                                     <StackPanel Margin="0,0,5,0">
