@@ -1770,24 +1770,72 @@ public partial class MainWindow : Window
 
     async void SendClick(object sender, RoutedEventArgs e)
     {
-        if (!await EnsureBin())
+        if (_layerBusy || !await EnsureBin())
             return;
-        var answer = MessageBox.Show(
-            "Turn off Bluetooth on your phone first. The starting ID is " + ReadId() +
-            ". If occupied, the uploader tries another valid ID and preserves the installed face.",
+        await UploadBinAsync(_savedBin!, ReadId());
+    }
+
+    async void SendBinClick(object sender, RoutedEventArgs e)
+    {
+        if (_layerBusy) return;
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Send exported .bin to watch",
+            Filter = "Watchface (*.bin)|*.bin",
+            CheckFileExists = true,
+            Multiselect = false,
+            InitialDirectory = Path.Combine(WatchfaceRoot, "out"),
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var ident = ReadBinaryDialId(dialog.FileName);
+            await UploadBinAsync(dialog.FileName, ident);
+        }
+        catch (Exception error)
+        {
+            Log("Cannot send binary: " + error.Message, LogLevel.Error);
+        }
+    }
+
+    static int ReadBinaryDialId(string path)
+    {
+        using var file = File.OpenRead(path);
+        using var reader = new BinaryReader(file);
+        if (file.Length < 0x40 || !reader.ReadBytes(4).SequenceEqual("dial"u8.ToArray()))
+            throw new InvalidDataException("Choose a native watchface .bin exported for the RS4 Plus.");
+        file.Position = 10;
+        var ident = reader.ReadUInt16();
+        if (ident is 0 or 65535)
+            throw new InvalidDataException("The binary contains an invalid watchface ID.");
+        return ident;
+    }
+
+    async Task<bool> UploadBinAsync(string path, int ident)
+    {
+        if (_layerBusy) return false;
+        if (!File.Exists(path))
+        {
+            Log("Binary file not found: " + path, LogLevel.Error);
+            return false;
+        }
+        var answer = MessageBox.Show(this,
+            "Turn off Bluetooth on your phone first.\n\nFile: " + Path.GetFileName(path) +
+            "\nThe starting ID is " + ident +
+            ". If occupied, the uploader tries another valid custom ID when supported and preserves the installed face.",
             "Upload",
             MessageBoxButton.OKCancel,
             MessageBoxImage.Warning);
         if (answer != MessageBoxResult.OK)
-            return;
+            return false;
         var source = Path.Combine(WatchfaceRoot, "send_face2.py");
         ShowUploadNotice();
         if (!File.Exists(source))
         {
             Log("Upload script not found.", LogLevel.Error);
-            return;
+            return false;
         }
-        await RunTool(Python(), $"\"{source}\" \"{_savedBin}\" {ReadId()}", "Upload");
+        return await RunTool(Python(), $"\"{source}\" \"{path}\" {ident}", "Upload");
     }
 
     async void RecoveryClick(object sender, RoutedEventArgs e)
@@ -1969,6 +2017,7 @@ public partial class MainWindow : Window
         SaveProjectButton.IsEnabled = !busy;
         SaveBinButton.IsEnabled = !busy;
         SendButton.IsEnabled = !busy;
+        SendBinButton.IsEnabled = !busy;
         RecoveryButton.IsEnabled = !busy;
         AddButton.IsEnabled = !busy;
         RemoveButton.IsEnabled = !busy;

@@ -35,6 +35,7 @@
                     </MenuItem>
                     <MenuItem Header="_Watch">
                         <MenuItem Header="Send to watch..." Click="SendClick" />
+                        <MenuItem Header="Send .bin to watch..." Click="SendBinClick" />
                         <Separator />
                         <MenuItem x:Name="RecoveryButton" Header="Recovery (factory reset)..." Click="RecoveryClick" />
                     </MenuItem>
@@ -45,6 +46,7 @@
             <DockPanel x:Name="StudioToolbar" Margin="10,6">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                     <Button x:Name="SaveBinButton" Content="Build .bin" Style="{StaticResource StudioToolButton}" Click="SaveBinClick" ToolTip="Generate watchface binary (Ctrl+Shift+B)" Margin="0,0,6,0" />
+                    <Button x:Name="SendBinButton" Content="Send .bin to watch" Style="{StaticResource StudioToolButton}" Click="SendBinClick" ToolTip="Choose an exported binary and install it without building the current project" Margin="0,0,6,0" />
                     <Button x:Name="SendButton" Content="Send to watch" Style="{StaticResource StudioAccentButton}" Click="SendClick" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
