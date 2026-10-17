@@ -453,7 +453,16 @@
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
                                         <Canvas x:Name="TimelineRuler" Height="26" Background="Transparent" MouseLeftButtonDown="TimelineRulerDown" MouseMove="TimelineRulerMove" MouseLeftButtonUp="TimelineRulerUp" LostMouseCapture="TimelineRulerLostCapture" />
-                                        <ListBox x:Name="FrameList" Grid.Row="1" Background="Transparent" BorderThickness="0" Padding="0" SelectionChanged="FrameSelected" ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto" AllowDrop="True" PreviewMouseLeftButtonDown="TimelineFrameMouseDown" PreviewMouseMove="TimelineFrameMouseMove" DragOver="TimelineFrameDragOver" Drop="TimelineFrameDrop">
+                                        <ListBox x:Name="FrameList" Grid.Row="1" Background="Transparent" BorderThickness="0" Padding="0" SelectionChanged="FrameSelected" AllowDrop="True" PreviewMouseLeftButtonDown="TimelineFrameMouseDown" PreviewMouseMove="TimelineFrameMouseMove" DragOver="TimelineFrameDragOver" Drop="TimelineFrameDrop">
+                                            <!-- The outer scroller owns both ruler and frames. A nested ListBox
+                                                 scroller can hide frame 1 after BringIntoView shifts its items. -->
+                                            <ListBox.Template>
+                                                <ControlTemplate TargetType="ListBox">
+                                                    <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                                                        <ItemsPresenter />
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </ListBox.Template>
                                             <ListBox.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <StackPanel Orientation="Horizontal" />
