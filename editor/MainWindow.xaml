@@ -257,16 +257,20 @@
                                                 <Button x:Name="LoadFontButton" Content="Load font (.ttf / .otf)" Margin="0,0,0,10" Click="LoadFontClick" />
                                                 <Button x:Name="LoadPngFontButton" Content="Load PNG font..." Margin="0,0,0,10" Click="LoadPngFontClick" ToolTip="Choose PNG character images to create a font, or open a saved .hfont.json font." />
                                                 <Button x:Name="EditPngFontButton" Content="Edit PNG font..." Margin="0,0,0,10" Click="EditPngFontClick" ToolTip="Add characters, replace images or change the mapping of this PNG font. Updates all text elements using it." />
-                                                <UniformGrid Columns="2">
-                                                    <StackPanel Margin="0,0,5,0">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="70"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                    <StackPanel Margin="0,0,10,0">
                                                         <TextBlock Text="Size" Foreground="{StaticResource Muted}" FontSize="11" />
                                                         <TextBox x:Name="SizeBox" Margin="0,3,0,0" TextChanged="FontSizeChanged" />
                                                     </StackPanel>
-                                                    <StackPanel Margin="5,0,0,0">
+                                                    <StackPanel Grid.Column="1">
                                                         <TextBlock Text="Color #RRGGBB" Foreground="{StaticResource Muted}" FontSize="11" />
-                                                        <TextBox x:Name="ColorBox" Margin="0,3,0,0" TextChanged="ColorChanged" />
+                                                        <DockPanel Margin="0,3,0,0">
+                                                            <Button x:Name="PickTextColorButton" Content="Pick..." DockPanel.Dock="Right" Click="PickTextColorClick" Style="{StaticResource StudioSmallButton}" Margin="6,0,0,0" IsEnabled="{Binding IsEnabled, ElementName=ColorBox}" ToolTip="Open hex color picker"/>
+                                                            <TextBox x:Name="ColorBox" TextChanged="ColorChanged" ToolTip="#RRGGBB"/>
+                                                        </DockPanel>
                                                     </StackPanel>
-                                                </UniformGrid>
+                                                </Grid>
                                                 <TextBlock x:Name="CharacterInfo" Text="Font text." Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,7,0,0" />
                                                 <TextBlock Text="Character spacing (px)" Foreground="{StaticResource Muted}" FontSize="11" Margin="0,7,0,0" />
                                                 <TextBox x:Name="CharacterSpacingBox" Text="0" IsEnabled="False" Margin="0,3,0,0" TextChanged="CharacterSpacingChanged" />
@@ -343,16 +347,9 @@
                                             <TextBlock Text="Icon / image color" Style="{StaticResource StudioFieldLabel}" />
                                             <DockPanel Margin="0,4,0,8">
                                                 <Button Content="Original" DockPanel.Dock="Right" Click="ResetAnimationColorClick" Style="{StaticResource StudioSmallButton}" Margin="6,0,0,0" />
+                                                <Button x:Name="PickAnimationColorButton" Content="Pick..." DockPanel.Dock="Right" Click="PickAnimationColorClick" Style="{StaticResource StudioSmallButton}" Margin="6,0,0,0" IsEnabled="{Binding IsEnabled, ElementName=AnimationColorBox}" ToolTip="Open hex color picker with opacity"/>
                                                 <TextBox x:Name="AnimationColorBox" TextChanged="AnimationColorChanged" ToolTip="#RRGGBB or #AARRGGBB. Blank restores original colors." />
                                             </DockPanel>
-                                            <UniformGrid Columns="6">
-                                                <Button Tag="#FFFFFF" Background="White" Height="20" Margin="0,0,3,0" Click="AnimationColorSwatchClick" />
-                                                <Button Tag="#000000" Background="Black" Height="20" Margin="0,0,3,0" Click="AnimationColorSwatchClick" />
-                                                <Button Tag="#FF4444" Background="#FF4444" Height="20" Margin="0,0,3,0" Click="AnimationColorSwatchClick" />
-                                                <Button Tag="#FFD54F" Background="#FFD54F" Height="20" Margin="0,0,3,0" Click="AnimationColorSwatchClick" />
-                                                <Button Tag="#66BB6A" Background="#66BB6A" Height="20" Margin="0,0,3,0" Click="AnimationColorSwatchClick" />
-                                                <Button Tag="#42A5F5" Background="#42A5F5" Height="20" Click="AnimationColorSwatchClick" />
-                                            </UniformGrid>
 
                                         </StackPanel>
                                     </Expander>
@@ -371,8 +368,7 @@
                                         </UniformGrid>
                                         <TextBlock Text="Fill color" />
                                         <DockPanel Margin="0,4,0,8">
-                                            <Button DockPanel.Dock="Right" Tag="#FFFFFF" Background="White" Width="28" Margin="6,0,0,0" Click="BackgroundColorSwatchClick" ToolTip="White" />
-                                            <Button DockPanel.Dock="Right" Tag="#000000" Background="Black" Width="28" Margin="6,0,0,0" Click="BackgroundColorSwatchClick" ToolTip="Black" />
+                                            <Button x:Name="PickBackgroundColorButton" Content="Pick..." DockPanel.Dock="Right" Click="PickBackgroundColorClick" Style="{StaticResource StudioSmallButton}" Margin="6,0,0,0" ToolTip="Open hex color picker"/>
                                             <TextBox x:Name="BackgroundColorBox" TextChanged="BackgroundColorChanged" ToolTip="#RRGGBB. Also fills transparent pixels and empty space around the image." />
                                         </DockPanel>
                                         <TextBlock Text="Image fit" />

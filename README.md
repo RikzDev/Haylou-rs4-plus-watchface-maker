@@ -204,7 +204,7 @@ Keep the project JSON and its companion assets together. Saving a project can cr
 Use the **Background** panel below the main buttons to change the canvas independently of text, images and animations:
 
 - **Change image...** loads a PNG, JPEG or BMP. **Remove image** keeps the fill color.
-- **Fill color** accepts `#RRGGBB` and appears around the image and through transparent pixels.
+- **Fill color** accepts `#RRGGBB` and appears around the image and through transparent pixels. Click **Pick...** for the hex color picker. Text color uses the same picker; opacity is available for image/sequence tint.
 - **Image fit** offers **Fill screen (crop)**, **Fit whole image**, **Stretch to screen** and **Original size**.
 - **Zoom** scales the image from 10% to 400%. **X offset** and **Y offset** move it relative to its centered position.
 - **Reset placement** restores centered, 100% fill-screen placement.
@@ -288,7 +288,7 @@ The editor now includes the extracted icon definitions as embedded resources. **
 
 Vector icons and animation lists are converted into editable PNG frames with the imported position, size and solid color. Transparent fills, strokes and trimmed progress paths are supported. Invisible resources remain hidden, and images embedded in the TBWF take priority over library resources. Unsupported drawable types produce a warning instead of silently disappearing.
 
-Select an icon or image in **Image sequences**, then use **Icon / image color**. Choose a palette swatch or enter `#RRGGBB`; `#AARRGGBB` also controls opacity. The chosen color applies to every frame, updates the preview and is written into the PNGs exported to the watch. Click **Original** to restore the source artwork. Original frames and the selected color are saved with the project, so you can change or restore the color after reopening it without accumulating opacity changes. This also works with older saved projects and ordinary imported images.
+Select an icon or image in **Image sequences**, then use **Icon / image color**. Click **Pick...** to open the hex color picker: drag within the color field, adjust hue and opacity, or paste a hexadecimal value. It accepts `#RRGGBB` and `#AARRGGBB` (alpha first), with or without `#`. The current and new colors are shown side by side. **Apply color** commits the selection; **Cancel** leaves the element unchanged. You can also enter `#RRGGBB` or `#AARRGGBB` directly in the inspector. The chosen color applies to every frame, updates the preview and is written into the PNGs exported to the watch. Click **Original** to restore the source artwork. Original frames and the selected color are saved with the project, so you can change or restore the color after reopening it without accumulating opacity changes. This also works with older saved projects and ordinary imported images.
 
 Battery resources use battery-driven selection. Raw TBWF/library weather and Bluetooth connection sets are imported with all their frames in **Fixed image** mode. Use **Weather icons** for live weather with the validated native condition order; automatic Bluetooth connection selection remains unsupported. Use **Single frame** to inspect them or reorder the desired image to the first position for a fixed display. Imported PNGs are saved with the project, so reopening it and generating a `.bin` no longer require the APK.
 
