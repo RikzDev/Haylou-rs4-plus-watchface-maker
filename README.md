@@ -365,7 +365,7 @@ To install an existing export, choose **Send .bin to watch** in the toolbar or *
 
 Uploads from the open project start with ID **253**; direct binary uploads start with the ID stored in that file. If that slot is occupied, it can try the other known custom IDs **251, 252 and 260** while preserving installed faces. These IDs were used in this project's experiments; they are not a universal reserved range. If every candidate is occupied, the uploader stops. It does not delete a working face automatically.
 
-The first Windows pairing attempt may fail and disconnect, followed by a successful encryption-only reconnection. A completed chunk transfer is not by itself proof of installation: the uploader also waits for the watch to report the intended dial ID.
+The first Windows pairing attempt may fail and disconnect, followed by a successful encryption-only reconnection. The reconnect pause is 0.5 seconds; an already dropped link does not receive a redundant disconnect request. Bluetooth discovery, Windows pairing and connection setup may still take longer. A completed chunk transfer is not by itself proof of installation: the uploader also waits for the watch to report the intended dial ID.
 
 ## Command-line tools
 

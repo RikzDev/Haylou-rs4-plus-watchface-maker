@@ -235,6 +235,18 @@ async def connect():
     return client
 
 
+async def reconnect(client):
+    # Pairing often drops the link itself. Avoid another Windows disconnect
+    # request on a dead link, and release a live link before the short pause.
+    if client.is_connected:
+        try:
+            await client.disconnect()
+        except Exception as exc:
+            print("[WARNING] Disconnect before reconnect failed", type(exc).__name__, exc, flush=True)
+    await asyncio.sleep(0.5)
+    return await connect()
+
+
 async def main():
     global PIC
     if "--check" not in sys.argv:
@@ -294,12 +306,7 @@ async def main():
         print("[WARNING] Pairing attempt failed", type(exc).__name__, exc, flush=True)
     if not paired or not client.is_connected:
         print("[WARNING] Link dropped during pairing; reconnecting automatically", flush=True)
-        await asyncio.sleep(3.0)
-        try:
-            await client.disconnect()
-        except Exception:
-            pass
-        client = await connect()
+        client = await reconnect(client)
         if client is None:
             return
         print("RECONNECTED", getattr(client, "mtu_size", "?"), flush=True)
@@ -317,12 +324,7 @@ async def main():
         await client.start_notify(NOTIFY, on_notify)
     except Exception as exc:
         print("[WARNING] Initial notifications failed; reconnecting", type(exc).__name__, exc, flush=True)
-        try:
-            await client.disconnect()
-        except Exception:
-            pass
-        await asyncio.sleep(4.0)
-        client = await connect()
+        client = await reconnect(client)
         if client is None:
             return
         print("RECONNECTED", getattr(client, "mtu_size", "?"), flush=True)
