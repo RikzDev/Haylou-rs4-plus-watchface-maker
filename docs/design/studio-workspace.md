@@ -1,6 +1,6 @@
 # Studio workspace redesign
 
-Branch: `design/studio-workspace`
+Original design branch: `design/studio-workspace`. The Studio workspace is the default editor on `main`.
 
 ## Visual direction
 
@@ -41,4 +41,4 @@ The first implementation is complete: IDE shell, explorer and inspector tabs, re
 
 Both local and portable Release builds passed without warnings or errors. A native WPF harness instantiated the actual window, rendered normal/minimum layouts, opened a copied Pip-Boy project and verified track/inspector selection, 1/64-frame timeline behavior, pause/resume, scrub/zoom geometry preservation, frame artwork/offset preservation on reorder, edit guards while building and save/reopen. The real project exported successfully, passed package preflight and preserved stack/registers during 500 mocked ARM ticks. Original projects and watch binaries were not overwritten; no watch upload was performed. Validation images remain local temporary artifacts, outside version control.
 
-The branch remains local. No commit or push was made for the redesign.
+The implementation and its visual plan are maintained in the main editor. The original design branch is retained in Git history.
