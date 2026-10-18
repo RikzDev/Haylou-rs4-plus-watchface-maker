@@ -69,11 +69,6 @@ public partial class MainWindow
         RenderBackground();
     }
 
-    void BackgroundColorSwatchClick(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button { Tag: string color }) BackgroundColorBox.Text = color;
-    }
-
     void BackgroundZoomChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         if (!_backgroundReady || _syncingBackground) return;

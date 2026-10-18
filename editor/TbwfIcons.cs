@@ -46,7 +46,7 @@ public partial class MainWindow
         return Colors.White;
     }
 
-    List<BitmapSource> RenderBuiltinDrawable(string name, int target, Color tint, HashSet<string> ancestors)
+    List<BitmapSource> RenderBuiltinDrawable(string name, int target, Color tint, HashSet<string> ancestors, bool preserveColors = false)
     {
         if (!ancestors.Add(name)) throw new InvalidDataException("Circular Android drawable reference: " + name);
         try
@@ -68,7 +68,7 @@ public partial class MainWindow
                 foreach (var item in root.Elements("item"))
                 {
                     var reference = (string?)item.Attribute("drawable") ?? "";
-                    frames.AddRange(RenderBuiltinDrawable(reference.Split('/').Last(), target, tint, ancestors));
+                    frames.AddRange(RenderBuiltinDrawable(reference.Split('/').Last(), target, tint, ancestors, preserveColors));
                 }
                 return frames;
             }
@@ -84,7 +84,7 @@ public partial class MainWindow
             {
                 drawing.PushTransform(new ScaleTransform(width / vw, height / vh));
                 drawing.PushOpacity(IconNumber(root, "alpha", 1));
-                DrawIconNodes(drawing, root, tint);
+                DrawIconNodes(drawing, root, tint, preserveColors);
                 drawing.Pop();
                 drawing.Pop();
             }
@@ -98,16 +98,17 @@ public partial class MainWindow
     static double IconNumber(XElement element, string attribute, double fallback) =>
         double.TryParse((string?)element.Attribute(attribute), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : fallback;
 
-    static Brush? IconBrush(XElement node, string attribute, string alphaAttribute, Color tint)
+    static Brush? IconBrush(XElement node, string attribute, string alphaAttribute, Color tint, bool preserveColors)
     {
         var value = (string?)node.Attribute(attribute);
         if (value == null) return null;
         // Android theme colors and the TBWF color filter both use the face tint.
         var alpha = value.StartsWith('#') ? ((Color)ColorConverter.ConvertFromString(value)).A : (byte)255;
-        return new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(Math.Round(alpha * tint.A / 255.0 * IconNumber(node, alphaAttribute, 1)), 0, 255), tint.R, tint.G, tint.B));
+        var color = preserveColors && value.StartsWith('#') ? (Color)ColorConverter.ConvertFromString(value) : tint;
+        return new SolidColorBrush(Color.FromArgb((byte)Math.Clamp(Math.Round(alpha * tint.A / 255.0 * IconNumber(node, alphaAttribute, 1)), 0, 255), color.R, color.G, color.B));
     }
 
-    static void DrawIconNodes(DrawingContext drawing, XElement parent, Color tint)
+    static void DrawIconNodes(DrawingContext drawing, XElement parent, Color tint, bool preserveColors)
     {
         var clips = 0;
         foreach (var node in parent.Elements())
@@ -122,7 +123,7 @@ public partial class MainWindow
                 matrix.Rotate(IconNumber(node, "rotation", 0));
                 matrix.Translate(px + IconNumber(node, "translateX", 0), py + IconNumber(node, "translateY", 0));
                 drawing.PushTransform(new MatrixTransform(matrix));
-                DrawIconNodes(drawing, node, tint);
+                DrawIconNodes(drawing, node, tint, preserveColors);
                 drawing.Pop();
             }
             else if (node.Name.LocalName is "path" or "clip-path")
@@ -134,14 +135,14 @@ public partial class MainWindow
                 var end = IconNumber(node, "trimPathEnd", 1);
                 if (start != 0 || end != 1)
                     geometry = TrimIconPath(geometry, start, end, IconNumber(node, "trimPathOffset", 0));
-                var stroke = IconBrush(node, "strokeColor", "strokeAlpha", tint);
+                var stroke = IconBrush(node, "strokeColor", "strokeAlpha", tint, preserveColors);
                 Pen? pen = stroke == null ? null : new Pen(stroke, IconNumber(node, "strokeWidth", 0));
                 if (pen != null)
                 {
                     pen.StartLineCap = pen.EndLineCap = (string?)node.Attribute("strokeLineCap") switch { "round" or "1" => PenLineCap.Round, "square" or "2" => PenLineCap.Square, _ => PenLineCap.Flat };
                     pen.LineJoin = (string?)node.Attribute("strokeLineJoin") switch { "round" or "1" => PenLineJoin.Round, "bevel" or "2" => PenLineJoin.Bevel, _ => PenLineJoin.Miter };
                 }
-                drawing.DrawGeometry(IconBrush(node, "fillColor", "fillAlpha", tint), pen, geometry);
+                drawing.DrawGeometry(IconBrush(node, "fillColor", "fillAlpha", tint, preserveColors), pen, geometry);
             }
         }
         while (clips-- > 0) drawing.Pop();

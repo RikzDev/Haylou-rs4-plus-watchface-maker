@@ -54,7 +54,16 @@ public partial class MainWindow
                     .OrderByDescending(entry => LayerIndex(entry.Target)).ThenByDescending(entry => entry.Order).ToList();
                 _layerSignature = signature;
             }
-            LayerList.SelectedItem = LayerList.Items.Cast<LayerEntry>().FirstOrDefault(entry => ReferenceEquals(entry.Target, target));
+            var selected = LayerList.Items.Cast<LayerEntry>().FirstOrDefault(entry => ReferenceEquals(entry.Target, target));
+            if (!ReferenceEquals(LayerList.SelectedItem, selected))
+            {
+                LayerList.SelectedItem = selected;
+                if (selected != null)
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () =>
+                    {
+                        if (ReferenceEquals(LayerList.SelectedItem, selected)) LayerList.ScrollIntoView(selected);
+                    });
+            }
             LayerZIndexBox.IsEnabled = BringToFrontButton.IsEnabled = SendToBackButton.IsEnabled = target != null && !_layerBusy;
             if (!ReferenceEquals(target, _shownLayerTarget) || !LayerZIndexBox.IsKeyboardFocusWithin)
                 LayerZIndexBox.Text = target == null ? "" : LayerIndex(target).ToString();
@@ -106,5 +115,9 @@ public partial class MainWindow
     sealed record LayerEntry(object Target, int Order)
     {
         public string Display => $"{LayerIndex(Target)} · {LayerLabel(Target)}";
+        public string Label => Target switch { Widget text => text.Label, AnimationItem image => image.Label, HandItem hand => hand.Kind + " hand", _ => "Element" };
+        public string Kind => Target switch { Widget => "Text", AnimationItem image => image.Frames.Count > 1 ? "Sequence" : "Image", _ => "Clock hand" };
+        public string Icon => Target switch { Widget => "\uE8D2", AnimationItem image => image.Frames.Count > 1 ? "\uE714" : "\uE8B9", _ => "\uE823" };
+        public int ZIndex => LayerIndex(Target);
     }
 }

@@ -53,7 +53,7 @@ public partial class MainWindow
 
     void OpenIconLibraryClick(object sender, RoutedEventArgs e)
     {
-        var target = _selectedAnimation;
+        var target = _selectedAnimation?.Source == "weather" ? null : _selectedAnimation;
         var dialog = new IconLibraryWindow(CreateBuiltinIconChoices(), target?.Label, target?.Frames.Count ?? 0) { Owner = this };
         if (dialog.ShowDialog() != true || dialog.SelectedIcons.Count == 0) return;
         try { AddBuiltinIcons(dialog.SelectedIcons.Select(icon => icon.ResourceName).ToArray(), dialog.AppendToSequence ? target : null); }
@@ -64,6 +64,7 @@ public partial class MainWindow
 
     void AddBuiltinIcons(string[] resourceNames, AnimationItem? target)
     {
+        if (target?.Source == "weather") throw new InvalidDataException("Use Weather icons to replace weather condition images.");
         if (resourceNames.Length == 0) return;
         EnsureBuiltinIconLibrary();
         var resolution = target == null ? 32 : Math.Clamp(Math.Max(target.Width, target.Height), 1, ScreenHeight);
@@ -131,7 +132,7 @@ public partial class MainWindow
         Redraw();
         Log($"Added built-in icon {animation.Label} ({frames.Count} frames). Change its color in the image sequence panel.");
         if (frames.Count > 1 && animation.Source == "static")
-            Log("Weather and connection sets use a fixed frame until automatic state selection is supported. All frames remain available in the sequence editor.", LogLevel.Warning);
+            Log("Raw weather and connection sets use a fixed frame. Use Weather icons to add automatic weather with the correct condition order. All library frames remain available in the sequence editor.", LogLevel.Warning);
     }
 
     static BitmapSource FitLibraryFrame(BitmapSource source, int width, int height)

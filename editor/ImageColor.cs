@@ -22,11 +22,6 @@ public partial class MainWindow
     static bool ValidImageColor(string text) => text.StartsWith('#') && text.Length is 7 or 9
         && text[1..].All(Uri.IsHexDigit);
 
-    void AnimationColorSwatchClick(object sender, RoutedEventArgs e)
-    {
-        if (_selectedAnimation != null && sender is Button { Tag: string color }) AnimationColorBox.Text = color;
-    }
-
     void ResetAnimationColorClick(object sender, RoutedEventArgs e)
     {
         if (_selectedAnimation != null) AnimationColorBox.Text = "";

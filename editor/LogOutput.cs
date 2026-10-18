@@ -48,6 +48,12 @@ public partial class MainWindow
         while (LogBox.Document.Blocks.Count > 2000)
             LogBox.Document.Blocks.Remove(LogBox.Document.Blocks.FirstBlock);
         LogBox.ScrollToEnd();
+        if (_studioReady)
+        {
+            StudioStatus.Text = line;
+            if (severity is LogLevel.Error or LogLevel.Warning)
+                StudioBottomTabs.SelectedIndex = 1;
+        }
     }
 
     void DispatchLog(string line, bool errorStream = false) =>
