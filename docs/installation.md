@@ -2,7 +2,40 @@
 
 [Project overview](../README.md) | [Documentation index](README.md)
 
-Run the commands in **PowerShell**, from the repository root unless stated otherwise.
+## Automatic installation
+
+On **Windows x64**, download and extract the project's source ZIP. Open **PowerShell** in that folder and run one command:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+The [installer](../install.ps1) downloads the current `main` source archive, reuses compatible dependencies when available, otherwise installs private Python 3.13, .NET 9 SDK / Desktop runtime and xPack ARM GCC 12.3.1-1.2. It creates a project-specific Python environment, installs the runtime packages, builds only Release, and creates Desktop and Start menu shortcuts named **RS4 Studio**. It opens the editor when installation finishes.
+
+Git and administrator privileges are not required. The installer does not change your global PATH or machine execution policy. Internet access is required; the first run downloads several hundred megabytes if the toolchains are missing. The source archive already includes the eZip converter and its notice. Python downloads are SHA-256 checked against the pinned release; the ARM archive is checked against its upstream checksum. Microsoft provides the [.NET installer script](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-install-script); Python's Windows installation options are documented [here](https://docs.python.org/3.13/using/windows.html#installing-without-ui).
+
+By default, installation uses `%LOCALAPPDATA%\HaylouFaceEditor`:
+
+- `Start-Editor.ps1` launches the active editor with the correct dependency paths.
+- `versions/<source hash>/` holds the source snapshot, its `.venv` and Release build.
+- `tools/` holds dependencies installed by this script; compatible existing tools are reused.
+- `installation.json` records the active version and tool paths; `install.log` records setup output.
+
+Rerun the command to install the current `main` snapshot. Older versions and saved projects are retained. A failed build leaves the previous launcher target unchanged. Save your work and close the installed editor before reinstalling the same snapshot.
+
+To choose another folder or finish without launching:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -InstallDirectory 'C:\Apps\RS4 Studio' -NoLaunch
+```
+
+Additional switches: `-NoShortcut` skips shortcuts; `-SourceArchive 'C:\Downloads\source.zip'` uses a local source archive containing one top-level project folder. Dependencies may still need downloads.
+
+Bluetooth setup remains optional. To upload, configure `HAYLOU_WATCH_ADDRESS` as described in the manual instructions below. The installer does not connect to your watch.
+
+## Manual installation
+
+Run the commands below in **PowerShell**, from the repository root unless stated otherwise.
 
 ### 1. Install the prerequisites
 

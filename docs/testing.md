@@ -27,3 +27,11 @@ To exercise a generated module without Bluetooth:
 ```
 
 These are simulated firmware services with explicit output sizes. They help detect memory and resource-access errors, but do not reproduce the complete firmware.
+
+## Windows installer checks
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\install.Tests.ps1
+```
+
+The installer checks use temporary fixtures and mocked tool installation/build commands. They cover path boundaries, ZIP traversal rejection, install/reinstall with spaces in paths, project preservation, failed-update recovery, cleanup and refusal to overwrite unmanaged version directories. They do not download or install prerequisites on the test machine.

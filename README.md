@@ -8,10 +8,20 @@ The **Studio workspace is the default editor**: Project Explorer on the left, an
 
 > Experimental community project. Local package checks and ARM emulation help detect known problems but do not guarantee stability for every firmware or design. See [validation limits](docs/testing.md) and [troubleshooting](docs/troubleshooting.md).
 
+## Install with one command
+
+Download and extract the source ZIP, open **PowerShell** in that folder, then run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+The installer downloads the current editor, sets up Python, .NET and the ARM compiler as needed, builds **Release** and creates **RS4 Studio** shortcuts. No Git or administrator account is required. See [installation details and manual setup](docs/installation.md).
+
 ## Get started
 
-1. Follow the [installation guide](docs/installation.md) to configure Python, .NET and the ARM toolchain.
-2. Launch the Release editor and [create or import a design](docs/editor-guide.md#getting-started).
+1. Install with the command above and open the **RS4 Studio** shortcut.
+2. [Create or import a design](docs/editor-guide.md#getting-started).
 3. Save the editable project and generate its native `.bin` file.
 4. [Send it to the watch](docs/uploading.md), or choose **Send .bin to watch** for an existing export.
 

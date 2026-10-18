@@ -3,6 +3,8 @@
 [Project overview](../README.md) | [Documentation index](README.md)
 
 ```text
+install.ps1                   Per-user dependency and Release installer
+tests/install.Tests.ps1        Isolated installer regression checks
 editor/                       Windows WPF application
   MainWindow.xaml             Main interface
   MainWindow.xaml.cs          Import, project persistence, build and send actions
