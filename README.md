@@ -4,8 +4,6 @@ A Windows watchface editor and reverse-engineering project for the **Haylou RS4 
 
 Import a **TBWF watchface made for the standard Haylou RS4**, edit its images, text, fonts and animations, and build a native `.bin` watchface for the RS4 Plus. The editor converts supported elements into a new LS11 package; the watch does not load TBWF files directly.
 
-**Repository:** [RikzDev/Haylou-rs4-plus-watchface-maker](https://github.com/RikzDev/Haylou-rs4-plus-watchface-maker)
-
 > **Development status:** This is an experimental project. The editor, builder and Bluetooth uploader are included; install the dependencies and configure your watch address before uploading. Earlier experimental modules caused fallback screens and, in one case, a crash requiring a factory reset. Local validation helps catch known problems, but does not establish compatibility with every firmware or watchface.
 
 ## Contents
@@ -47,6 +45,7 @@ The editor UI and tool output are in English. The Output panel uses white for in
 | Item | Support |
 | --- | --- |
 | Target watch | Haylou RS4 Plus, identified as LS11 in the investigated device |
+| Reference watch firmware | `V22.07.001.1.1.1.4.28` |
 | Output resolution | 368 × 448 pixels |
 | Imported design format | Hello Haylou TBWF, including designs for the standard RS4 |
 | Output format | SiFli `dial` container with an ARM module, resources and thumbnail |
